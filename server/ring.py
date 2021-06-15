@@ -13,6 +13,8 @@ import time
 @pyro.expose
 class RingNode(LoggerMixin,ClockMixin, ChordNode):
     
+    CACHE_THRESHOLD_SECONDS = 60
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fetcher = URLFetcher()
@@ -31,6 +33,12 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             return self.url_hash(value)
         return self.url_hash(value[ST_URL])
     
+    def equal(self, list_value:URLState, lookup_value:str):
+        """
+        Overriden equal function for comparing values
+        """
+        return list_value[0] == lookup_value
+
     def url_hash(self, url:str):
         """
         Hash function used to get urls hash
@@ -102,7 +110,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         # TODO Something more fancy?
         fetch_time = state[ST_FETCH_TIME]
-        if fetch_time != None and self.get_ds_time() - fetch_time > 60: # One minute cache threshold. Only temporary
+        if fetch_time != None and self.get_ds_time() - fetch_time > CACHE_THRESHOLD_SECONDS: # One minute cache threshold. Only temporary
             return True
         return False
         
