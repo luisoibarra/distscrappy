@@ -1,6 +1,8 @@
 import Pyro4 as pyro
 import logging as log
 
+from Pyro4.core import Proxy, URI
+
 def method_logger(fun):
     """
     Decorator for logging methods calls
@@ -23,4 +25,10 @@ def create_object_proxy(name, ns_host:str, ns_port:int):
     with pyro.locateNS(ns_host, ns_port) as ns:
         object_uri = ns.lookup(name)
         return pyro.Proxy(object_uri)
+
+def create_proxy(dir:URI)->pyro.Proxy:
+    """
+    Create an object proxy from the given dir
+    """
+    return pyro.Proxy(dir)
     
