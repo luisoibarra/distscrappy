@@ -2,6 +2,7 @@ from shared.const import *
 import json
 import http
 import random
+from typing import List,Dict
 
 class DistcrappyClient:
     

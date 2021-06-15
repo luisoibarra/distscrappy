@@ -1,3 +1,4 @@
+from typing import Dict
 import Pyro4 as pyro
 import random
 import logging as log
@@ -13,7 +14,7 @@ class ChordCoordinator:
     ADDRESS = "coordinator.chord"
     
     def __init__(self, key_bits:int, dm_host:str, dm_port:int, ns_host:str, ns_port:int):
-        self.node_addresses = {}
+        self.node_addresses : Dict[object,object]= {}
         self._daemon_host = dm_host
         self._daemon_port = dm_port
         self._name_server_host = ns_host

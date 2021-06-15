@@ -1,3 +1,4 @@
+from typing import List,Dict
 import Pyro4 as pyro
 import Pyro4.util
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -101,7 +102,7 @@ class ChordNode:
     id = property(_get_id, _set_id)
     
     def __init__(self, host=None, port=0, name_server_host=None, name_server_port=None, forced_id=None, stabilization=True, bits:int=5):
-        self.listeners = []
+        self.listeners:List[object] = []
         self.host = host
         self.port = port
         self.name_server_host = name_server_host
@@ -111,10 +112,10 @@ class ChordNode:
         self.bits = bits
         self.max_nodes = 1 << self.bits
         self.max_successor_list_count = self.bits
-        self.successor_list = []
+        self.successor_list:List[object] = []
         self.stabilization = stabilization
         self.running = False
-        self.values = {}
+        self.values:Dict[object,object]= {}
         self.executor = ThreadPoolExecutor()
 
     @method_logger
