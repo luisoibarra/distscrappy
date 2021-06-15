@@ -1,0 +1,103 @@
+from chord.ch_node import ChordNode
+from chord.ch_shared import create_object_proxy, method_logger
+from typing import List,Dict,Tuple
+from shared.const import *
+from server.fetcher import URLFetcher
+from shared.error import ScrapperError
+from Pyro4 import URI
+import time
+
+class RingNode(ChordNode):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fetcher = URLFetcher()
+    
+    def is_responsible_for(self, id:int)->bool:
+        """
+        Returns if current node is responsable for saving given id
+        """
+        return self.in_between(id, self.predecessor+1, self.id+1)
+    
+    def hash(self, value:URLState):
+        """
+        Overriden hash function to provide DictionarySupport
+        """
+        if isinstance(value, (URI, str)):
+            return self.url_hash(value)
+        return self.url_hash(value[ST_URL])
+    
+    def url_hash(self, url:str):
+        """
+        Hash function used to get urls hash
+        """
+        return super().hash(url)
+    
+    def get_urls(self, urls:List[str])->URLHTMLDict:
+        """
+        Get a given urls list
+        """
+        url_html_dict = {}
+        
+        for url in urls: # TODO Maybe some threads can be created here
+            state = self.fetch_url_state(url)
+            if state is not None and self.is_cache_valid(state): # Exist entry in DHT
+                url_html_dict[url] = get_scrapped_info(state[ST_HTML], None)
+            else:
+                try:
+                    fetched_state = self.fetch_url(url, True)
+                    url_html_dict[url] = get_scrapped_info(fetched_state[ST_HTML], None)
+                except Exception as exc:
+                    url_html_dict[url] = get_scrapped_info(None, exc.args[0])
+        
+        return url_html_dict
+            
+    def fetch_url(self, url:str, state_checked:bool=False)->URLState:
+        """
+        Create and return a URLState for given url. If state_checked it will not verify if the 
+        url is already in the DHT 
+        """
+        url_hash = self.url_hash(url)
+        if self.is_responsible_for(url_hash): 
+            # Current node must perform the fetching process
+            
+            if not state_checked: # Check if already in DHT
+                state = self.fetch_url_state(url)
+                if state is not None and self.is_cache_valid(state):
+                    return state
+
+            #  Fetch URL
+            scrapped = self.fetcher.fetch_url(url)
+            if scrapped[SCR_ERROR]:
+                raise ScrapperError(scrapped[SCR_ERROR])
+            else:
+                return get_url_state(url, self.get_ds_time(), scrapped[SCR_HTML])
+        else:
+            # Other node is responsible for this url
+            suc = self.find_successor(url_hash)
+            node = self.get_node_proxy(suc)
+            return node.fetch_url(url)
+    
+    def is_cache_valid(self, state:URLState):
+        """
+        Return if the HTML is valid to return to the client 
+        """
+        # TODO Something more fancy?
+        fetch_time = state[ST_FETCH_TIME]
+        if fetch_time != None and self.get_ds_time() - fetch_time > 60: # One minute cache threshold. Only temporary
+            return True
+        return False
+        
+    def get_ds_time(self)->float:
+        """
+        Returns the distributed time stamp
+        """
+        # TODO Make a clock sync algorithm
+        return time.time()
+    
+    def fetch_url_state(self, url:str)->URLState:
+        try:
+            state = self.lookup(url)
+            return state
+        except KeyError: # Not found => Not currently active 
+            return None
