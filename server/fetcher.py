@@ -35,7 +35,7 @@ class URLFetcher(LoggerMixin):
                     if self._url_validator(url):
                         response = urequest.urlopen(url)
                         webContent = response.read()
-                        return webContent
+                        return webContent.decode()
                     raise URLError("Invalid url")
                 
                 def finish_downloading_callback(task:Future):
@@ -49,9 +49,10 @@ class URLFetcher(LoggerMixin):
                 task = self.executor.submit(download)
                 self.downloading[url] = task
                 task.add_done_callback(finish_downloading_callback)
-                return task.result(), None
+                return get_scrapped_info(task.result(), None)
         except Exception as ex:
             exc = str(ex.args[0])
+            self.log_exception(ex)
             return get_scrapped_info(None, exc)
 
     def _url_validator(self,url:str)->bool:

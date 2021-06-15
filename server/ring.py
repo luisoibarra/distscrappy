@@ -3,6 +3,7 @@ from chord.ch_node import ChordNode
 from chord.ch_shared import create_object_proxy, method_logger
 from typing import List,Dict,Tuple
 from shared.const import *
+from shared.logger import LoggerMixin
 from server.fetcher import URLFetcher
 from shared.error import ScrapperError
 from Pyro4 import URI
@@ -10,7 +11,7 @@ import Pyro4 as pyro
 import time
 
 @pyro.expose
-class RingNode(ClockMixin,ChordNode):
+class RingNode(LoggerMixin,ClockMixin, ChordNode):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,16 +46,30 @@ class RingNode(ClockMixin,ChordNode):
         for url in urls: # TODO Maybe some threads can be created here
             state = self.fetch_url_state(url)
             if state is not None and self.is_cache_valid(state): # Exist entry in DHT
+                self.log_info(f"Cache Hit for {url}")
                 url_html_dict[url] = get_scrapped_info(state[ST_HTML], None)
             else:
+                self.log_info(f"Downloading {url}")
                 try:
                     fetched_state = self.fetch_url(url, True)
+                    self.insert_state(fetched_state)
                     url_html_dict[url] = get_scrapped_info(fetched_state[ST_HTML], None)
                 except Exception as exc:
                     url_html_dict[url] = get_scrapped_info(None, exc.args[0])
-        
+
         return url_html_dict
-            
+    
+    @method_logger
+    def insert_state(self, state:URLState):
+        """
+        Insert given state into the DHT
+        """
+        state_hash = self.hash(state)
+        succ = self.find_successor(state_hash)
+        succ_node = self.get_node_proxy(succ)
+        succ_node.insert(state)
+    
+    @method_logger
     def fetch_url(self, url:str, state_checked:bool=False)->URLState:
         """
         Create and return a URLState for given url. If state_checked it will not verify if the 

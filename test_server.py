@@ -2,12 +2,13 @@ import http.server as http_s
 import socketserver
 import logging as log
 from typing import List,Dict,Tuple
+from config import *
 from server.receiver import MyHTTPServer
 from concurrent.futures import ThreadPoolExecutor, Future
 import os
 import sys
 
-test_server_dir = ("127.0.0.5",9000)
+test_server_dir = HTTP_TEST_SERVER_ADDR
 base_dir = "html"
 htmls = os.listdir(base_dir)
 
