@@ -1,3 +1,4 @@
+from shared.clock import ClockMixin
 from chord.ch_node import ChordNode
 from chord.ch_shared import create_object_proxy, method_logger
 from typing import List,Dict,Tuple
@@ -9,7 +10,7 @@ import Pyro4 as pyro
 import time
 
 @pyro.expose
-class RingNode(ChordNode):
+class RingNode(ClockMixin,ChordNode):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -94,8 +95,7 @@ class RingNode(ChordNode):
         """
         Returns the distributed time stamp
         """
-        # TODO Make a clock sync algorithm
-        return time.time()
+        return self.getClockTime()
     
     def fetch_url_state(self, url:str)->URLState:
         try:

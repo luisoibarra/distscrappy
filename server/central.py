@@ -1,3 +1,4 @@
+from server.timing import TimeSynchronization
 from shared.logger import LoggerMixin
 from shared.const import *
 import Pyro4 as pyro
@@ -21,6 +22,7 @@ class CentralNode(LoggerMixin):
         self.executor = ThreadPoolExecutor()
         self.receivers_tasks = None
         self.name_server_tasks = None
+        self.timing_tasks = None
         self.running = False
     
     def start(self):
@@ -29,11 +31,21 @@ class CentralNode(LoggerMixin):
         """
         self.name_server_tasks = []
         self.receivers_tasks = []
+        self.timing_tasks = []
+
         ns_task = self.executor.submit(self.name_server_loop)
         self.name_server_tasks.append(ns_task)
+
         rec_task = self.executor.submit(self.receiver_server_loop)
         self.receivers_tasks.append(rec_task)
+
+        ts = TimeSynchronization()
+        host,port = self.ns_address
+        time_task = self.executor.submit(ts.startConnecting(host,port,self.executor))
+        self.timing_tasks.append(time_task)
+
         
+
         for ns_task in self.name_server_tasks:
             ns_task.add_done_callback(self._task_finish_callback("Name server"))
         for rec_task in self.receivers_tasks:

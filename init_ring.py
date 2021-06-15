@@ -9,15 +9,21 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 import logging as log
 from config import *
+import plac
 
-
-def start(index:int):
+def start(
+    index:('index','option','i',int) = 0,
+    address:('address','option','addr',str) = None
+    ):
     log.basicConfig(level=log.DEBUG)
-    host, port = RING_ADDRS[index]
-    ring = RingNode(host, port, NS_ADDR[0], NS_ADDR[1])
+    if address is None:
+        host, port = RING_ADDRS[index]
+    else:
+        host,port=address.split(":")
+    ring = RingNode(host, int(port), NS_ADDR[0], NS_ADDR[1])
     ring.start()
     
 if __name__ == "__main__":
-    index = 0
-    start(index)
+    import plac
+    plac.call(start)
 
