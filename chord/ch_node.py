@@ -308,7 +308,7 @@ class ChordNode:
         while not (self.in_between(key, self.sum_id(current.id, 1), self.sum_id(current.successor, 1))):
             current_id = current.closest_preceding_finger(key)
             current = self.get_node_proxy(current_id)
-            log.info(f"find_predecessor cycle: key:{key} current_id:{current.id}, current_successor:{current.successor}")
+            log.debug(f"find_predecessor cycle: key:{key} current_id:{current.id}, current_successor:{current.successor}")
         return current.id
     
     def closest_preceding_finger(self, key):

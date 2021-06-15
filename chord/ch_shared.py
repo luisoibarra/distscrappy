@@ -8,13 +8,13 @@ def method_logger(fun):
     Decorator for logging methods calls
     """
     def ret_fun(*args, **kwargs):
-        log.info(f"{fun.__name__} called with {args[1:]} and {kwargs}")
+        log.debug(f"{fun.__name__} called with {args[1:]} and {kwargs}")
         try:
             value = fun(*args, **kwargs)
         except Exception as exc:
             log.exception(exc)
             raise exc
-        log.info(f"{fun.__name__} exited returning {value}")
+        log.debug(f"{fun.__name__} exited returning {value}")
         return value
     return ret_fun
         
