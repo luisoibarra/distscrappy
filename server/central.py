@@ -39,6 +39,8 @@ class CentralNode(LoggerMixin):
         rec_task = self.executor.submit(self.receiver_server_loop)
         self.receivers_tasks.append(rec_task)
 
+        time.sleep(1)
+        
         ts = TimeSynchronization()
         host,port = self.ns_address
         time_task = self.executor.submit(ts.startConnecting(host,port,self.executor))

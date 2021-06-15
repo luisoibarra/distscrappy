@@ -15,7 +15,7 @@ def start(
     index:('index','option','i',int) = 0,
     address:('address','option','addr',str) = None
     ):
-    log.basicConfig(level=log.DEBUG)
+    log.basicConfig(level=log.INFO)
     if address is None:
         host, port = RING_ADDRS[index]
     else:

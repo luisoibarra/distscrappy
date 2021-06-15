@@ -1,5 +1,8 @@
 import time
 
+import Pyro4
+
+@Pyro4.expose
 class ClockMixin:
     """
     Mixin that provides clock time methods

@@ -1,4 +1,5 @@
 from functools import reduce
+from server.ring import RingNode
 import time
 from shared.logger import LoggerMixin
 import Pyro4 as pyro
@@ -19,13 +20,14 @@ class TimeSynchronization(LoggerMixin):
         receive clock time from a connected client
         '''
         # recieve clock time
+        try:
+            clock_time = node.getClockTime()
 
-        clock_time = node.getClockTime()
+            clock_time_diff = time.time() - clock_time
 
-        clock_time_diff = time.time() - clock_time
-
-        self.client_data[node.ID] = {"clock_time": clock_time,"time_difference": clock_time_diff,"remote_node": node}
-
+            self.client_data[node.id] = {"clock_time": clock_time,"time_difference": clock_time_diff,"remote_node": node}
+        except Exception as e:
+            pass
 
 
 
@@ -41,7 +43,7 @@ class TimeSynchronization(LoggerMixin):
         while True:
 
             with pyro.locateNS(name_server_host, name_server_port) as ns:
-                availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
+                availables = ns.list(prefix = RingNode.CHORD_NODE_PREFIX)
 
             for client_name , client_address in availables.items():
                 node = create_proxy(client_address)
