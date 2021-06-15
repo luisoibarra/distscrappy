@@ -200,8 +200,9 @@ class ChordNode:
             log.exception(exc)
         
         try:
-            coordinator = create_object_proxy(self.coordinator_address, self.name_server_host, self.name_server_port)
-            coordinator.unregister(self.id)
+            # coordinator = create_object_proxy(self.coordinator_address, self.name_server_host, self.name_server_port)
+            # coordinator.unregister(self.id)
+            pass
         except Exception as exc:
             log.exception(exc)
             
@@ -265,9 +266,16 @@ class ChordNode:
         """
         with pyro.locateNS(self.name_server_host, self.name_server_port) as ns:
             availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
-        if availables:
+        while availables:
             node_name, node_address = random.choice([x for x in availables.items()])
-            return create_object_proxy(node_name, self.name_server_host, self.name_server_port)
+            try:
+                node = create_object_proxy(node_name, self.name_server_host, self.name_server_port)
+                node_id = node.id # Check if node is alive
+                log.info(f"Returned initial node {node_id} with address {node_address}")
+                return node
+            except pyro.errors.CommunicationError:
+                log.info(f"Node {node_name} offline")
+                availables.__delitem__(node_name)
         return None
                 
     def in_between(self, key, lwb, upb, equals=True):

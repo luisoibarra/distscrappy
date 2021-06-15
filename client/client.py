@@ -41,3 +41,18 @@ class DistcrappyClient:
         }
         return json.dumps(json_dict)
 
+    def start(self):
+        command = ""
+        while True:
+            command = input()
+            if command == "exit":
+                break
+            command, *args = command.split(" ")
+            if command == "fetch":
+                try:
+                    result = self.get_urls(args)
+                    print(result)
+                except Exception as exc:
+                    print(exc)
+            else:
+                print("Availables commands:\nfetch URL1[, URL2[, URL3 ...]]\n")

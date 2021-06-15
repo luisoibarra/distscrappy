@@ -5,8 +5,10 @@ from shared.const import *
 from server.fetcher import URLFetcher
 from shared.error import ScrapperError
 from Pyro4 import URI
+import Pyro4 as pyro
 import time
 
+@pyro.expose
 class RingNode(ChordNode):
     
     def __init__(self, *args, **kwargs):
@@ -23,7 +25,7 @@ class RingNode(ChordNode):
         """
         Overriden hash function to provide DictionarySupport
         """
-        if isinstance(value, (URI, str)):
+        if isinstance(value, (URI, str, int)):
             return self.url_hash(value)
         return self.url_hash(value[ST_URL])
     

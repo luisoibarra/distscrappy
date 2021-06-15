@@ -47,11 +47,12 @@ class URLFetcher(LoggerMixin):
                     self.downloading.__delitem__(url) # Remove url from downloading dictionary
                 
                 task = self.executor.submit(download)
-                task.add_done_callback(finish_downloading_callback)
                 self.downloading[url] = task
+                task.add_done_callback(finish_downloading_callback)
                 return task.result(), None
         except Exception as ex:
-            return get_scrapped_info(None, ex.args[0])
+            exc = str(ex.args[0])
+            return get_scrapped_info(None, exc)
 
     def _url_validator(self,url:str)->bool:
         """
@@ -61,5 +62,5 @@ class URLFetcher(LoggerMixin):
         if o.scheme not in ["https","http","ftp","ftps"]:
             o.scheme = "https"
             url = o.geturl()
-        return all([o.scheme,o.netloc,o.path])
+        return all([o.scheme,o.netloc,o.path]) or all([o.scheme, o.netloc])
     
