@@ -10,6 +10,7 @@ from chord.ch_shared import create_object_proxy
 import random
 from shared.error import DistscrappyError
 import time
+from typing  import List
 
 class CentralNode(LoggerMixin):
     """
@@ -40,7 +41,7 @@ class CentralNode(LoggerMixin):
         self.receivers_tasks.append(rec_task)
 
         time.sleep(1)
-        
+
         ts = TimeSynchronization()
         host,port = self.ns_address
         time_task = self.executor.submit(ts.startConnecting(host,port,self.executor))

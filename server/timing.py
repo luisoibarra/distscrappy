@@ -1,4 +1,5 @@
 from functools import reduce
+from typing import Dict
 from server.ring import RingNode
 import time
 from shared.logger import LoggerMixin
@@ -11,7 +12,7 @@ class TimeSynchronization(LoggerMixin):
     def __init__(self) -> None:
         super().__init__()
         # datastructure used to store client address and clock data
-        self.client_data = {}
+        self.client_data:Dict[float,object]= {}
         
     
     
@@ -81,5 +82,5 @@ class TimeSynchronization(LoggerMixin):
                     synchronized_time = time.time() + average_clock_difference
                     node['remote_node'].setClockTime(synchronized_time)
                 except Exception as e:
-                    print("Something went wrong while " + "sending synchronized time " + "through " + str(n_id))
+                    pass
 
