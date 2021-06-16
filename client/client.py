@@ -19,6 +19,7 @@ class DistcrappyClient:
         for host, port in server_dirs:
             conn = http.client.HTTPConnection(host, port)
             try:
+                urls = ['http://'+url for url in urls]
                 content = self.build_json_string(urls)
                 conn.request("GET", "urls", content, {"Content-Length":len(content)})
                 resp = conn.getresponse()
@@ -56,4 +57,4 @@ class DistcrappyClient:
                 except Exception as exc:
                     print(exc)
             else:
-                print("Availables commands:\nfetch URL1[, URL2[, URL3 ...]]\n")
+                print("Availables commands:\nfetch URL1 URL2 URL3 ...\n example: fetch www.wikipedia.org www.instagram.com")

@@ -61,7 +61,7 @@ class URLFetcher(LoggerMixin):
         """
         o = uparse.urlparse(url)
         if o.scheme not in ["https","http","ftp","ftps"]:
-            url = "https://"+f"{o.netloc}"+f"{o.path}"
+            url = "http://"+f"{o.netloc}"+f"/{o.path}"
             o = uparse.urlparse(url)
 
         return all([o.scheme,o.netloc,o.path]) or all([o.scheme, o.netloc])
