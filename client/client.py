@@ -58,3 +58,6 @@ class DistcrappyClient:
                     print(exc)
             else:
                 print("Availables commands:\nfetch URL1 URL2 URL3 ...\n example: fetch www.wikipedia.org www.instagram.com")
+
+
+# fetch http://www.cubaeduca.cu http://www.etecsa.cu http://www.uci.cu http://evea.uh.cu http://www.uo.edu.cu http://www.uclv.edu.cu http://covid19cubadata.uh.cu http://www.uh.cu
