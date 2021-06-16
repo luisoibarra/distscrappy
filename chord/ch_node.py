@@ -57,6 +57,12 @@ class ChordNode:
         """
         return hash(value) % (self.max_nodes) 
     
+    def equal(self, list_value, lookup_value):
+        """
+        Equal function for comparing values
+        """
+        return list_value == lookup_value
+    
     @classmethod
     def node_name(cls, id):
         """
@@ -113,16 +119,20 @@ class ChordNode:
         self.executor = ThreadPoolExecutor()
 
     @method_logger
-    def lookup(self, key):
+    def lookup(self, value):
         """
-        Returns the value associated with the key 
+        Returns the value associated with the value 
         """
-        key = self.hash(key)
+        key = self.hash(value)
         if self.in_between(key, self.sum_id(self.predecessor, 1), self.sum_id(self.id, 1)):
-            return self.values[key]
+            equal_hash = self.values[key]
+            try:
+                return [x for x in equal_hash if self.equal(x, value)][0]
+            except IndexError:
+                raise KeyError(f"Value {value} not found in DHT")
         successor_id = self.find_successor(key)
         successor = self.get_node_proxy(successor_id)
-        return successor.lookup(key)
+        return successor.lookup(value)
     
     @method_logger
     def insert(self, value, key=None):
@@ -135,7 +145,14 @@ class ChordNode:
             key = self.hash(value)
         successor_id = self.find_successor(key)
         if successor_id == self.id:
-            self.values[key] = value
+            if key in self.values:
+                try:
+                    self.values[key].remove(value) # Remove old value if exist
+                except ValueError:
+                    pass
+                self.values[key].append(value)
+            else:
+                self.values[key] = [value]
         else:
             successor = self.get_node_proxy(successor_id)
             successor.insert(value, key)
@@ -248,9 +265,27 @@ class ChordNode:
             
             # Register node in pyro name server and deamon
             self.dir = daemon.register(self)
-            self.id = self.hash(self.dir)
             with pyro.locateNS(self.name_server_host, self.name_server_port) as ns:
-                ns.register(type(self).node_name(self.id), self.dir)
+                current_prefix = type(self).CHORD_NODE_PREFIX
+                nodes = ns.list(prefix=current_prefix)
+                
+                id = self.hash(self.dir)
+                name = type(self).node_name(id)
+                try_amount = self.bits
+                
+                while try_amount > 0:
+                    if name not in nodes:
+                        self.id = id
+                        ns.register(name, self.dir)
+                        break
+                    import string
+                    random_string = "".join(random.choices(string.ascii_uppercase) for _ in range(20))
+                    id = self.hash(random_string)
+                    name = type(self).node_name(id)
+                    try_amount -= 1 
+                else:
+                    raise ValueError("Can't add node to DHT table, is over populated")
+                
             
             # Joining DHT
             self.join(initial_node)

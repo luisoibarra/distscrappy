@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 import logging as log
 from config import *
-import plac
 
 def start(
     index:('index','option','i',int) = 0,
@@ -19,7 +18,7 @@ def start(
     if address is None:
         host, port = RING_ADDRS[index]
     else:
-        host,port=address.split(":")
+        host, port = address.split(":")
     ring = RingNode(host, int(port), NS_ADDR[0], NS_ADDR[1])
     ring.start()
     
