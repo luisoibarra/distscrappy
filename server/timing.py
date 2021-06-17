@@ -1,11 +1,12 @@
 from functools import reduce
-from typing import Dict
+from shared.const import IP_DIR
+from typing import Dict, List
 from server.ring import RingNode
 import time
 from shared.logger import LoggerMixin
 import Pyro4 as pyro
 from concurrent.futures import ThreadPoolExecutor
-from chord.ch_shared import create_proxy
+from chord.ch_shared import create_proxy, locate_ns
 
 
 class TimeSynchronization(LoggerMixin):
@@ -13,6 +14,7 @@ class TimeSynchronization(LoggerMixin):
         super().__init__()
         # datastructure used to store client address and clock data
         self.client_data:Dict[float,object]= {}
+        self.running = False
         
     
     
@@ -28,11 +30,11 @@ class TimeSynchronization(LoggerMixin):
 
             self.client_data[node.id] = {"clock_time": clock_time,"time_difference": clock_time_diff,"remote_node": node}
         except Exception as e:
-            pass
+            self.log_exception(e)
 
 
 
-    def startConnecting(self, name_server_host, name_server_port, executor:ThreadPoolExecutor=None):
+    def startConnecting(self, ns_addresses: List[IP_DIR], executor:ThreadPoolExecutor=None):
         ''' 
         master thread function used to open portal for
         accepting clients over given port
@@ -40,20 +42,26 @@ class TimeSynchronization(LoggerMixin):
         if executor is None:
             executor = ThreadPoolExecutor()
 
+        self.running = True
         # fetch clock time at slaves / clients
-        while True:
+        while self.running:
+            try:
+                with locate_ns(ns_addresses) as ns:
+                    availables = ns.list(prefix = RingNode.CHORD_NODE_PREFIX)
 
-            with pyro.locateNS(name_server_host, name_server_port) as ns:
-                availables = ns.list(prefix = RingNode.CHORD_NODE_PREFIX)
-
-            for client_name , client_address in availables.items():
-                node = create_proxy(client_address)
-                current_thread = executor.submit(self.startRecieveingClockTime,node)
-            self.synchronizeAllClocks()
-
+                for client_name , client_address in availables.items():
+                    node = create_proxy(client_address)
+                    current_thread = executor.submit(self.startRecieveingClockTime, node)
+                self.synchronizeAllClocks()
+            except Exception as e:
+                self.log_exception(e)
             time.sleep(5)
                     
-
+    def stop(self):
+        """
+        Stops service
+        """
+        self.running = False
 
     # subroutine function used to fetch average clock difference
     def getAverageClockDiff(self):
@@ -80,7 +88,8 @@ class TimeSynchronization(LoggerMixin):
             for n_id,node in self.client_data.items():
                 try:
                     synchronized_time = time.time() + average_clock_difference
+                    self.log_debug(f"Clock sync node {n_id} {average_clock_difference}")
                     node['remote_node'].setClockTime(synchronized_time)
                 except Exception as e:
-                    pass
+                    self.log_exception(e)
 

@@ -18,14 +18,25 @@ def method_logger(fun):
         return value
     return ret_fun
         
-def create_object_proxy(name, ns_host:str, ns_port:int):
+def create_object_proxy(name, ns_addresses: list):
     """
     Create an object proxy from the given name 
     """
-    with pyro.locateNS(ns_host, ns_port) as ns:
-        object_uri = ns.lookup(name)
-        return pyro.Proxy(object_uri)
+    ns = locate_ns(ns_addresses)
+    object_uri = ns.lookup(name)
+    return pyro.Proxy(object_uri)
 
+def locate_ns(ns_addresses: list):
+    exceptions = []
+    for ns_host, ns_port in ns_addresses:
+        try:
+            ns = pyro.locateNS(ns_host, ns_port)
+            ns.ping() # Check if it is alive
+            return ns
+        except Exception as exc:
+            exceptions.append(exc)
+    raise exceptions[0]
+        
 def create_proxy(dir:URI)->pyro.Proxy:
     """
     Create an object proxy from the given dir
