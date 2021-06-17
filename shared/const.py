@@ -35,4 +35,5 @@ SERV_ZMQ : int = 2
 URLS_KEY : str = "urls" # Json key for URLs 
 ERROR_KEY : str = "errors" # Json key for Errors
 
-NS_TIME_RETRY:int = 10 #Name server retry time in seconds
+NS_TIME_RETRY:int = 10 # Name server retry time in seconds
+NS_TRY_AMOUNT:int = 3 # Name server retry connection amount

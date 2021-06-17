@@ -3,6 +3,7 @@ from chord.ch_node import ChordNode
 from chord.ch_shared import create_object_proxy, method_logger
 from typing import List,Dict,Tuple
 from shared.const import *
+from config import CACHE_THRESHOLD_SECONDS
 from shared.logger import LoggerMixin
 from server.fetcher import URLFetcher
 from shared.error import ScrapperError
@@ -12,9 +13,7 @@ import time
 
 @pyro.expose
 class RingNode(LoggerMixin,ClockMixin, ChordNode):
-    
-    CACHE_THRESHOLD_SECONDS = 60
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fetcher = URLFetcher()
@@ -95,7 +94,8 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             #  Fetch URL
             scrapped = self.fetcher.fetch_url(url)
             if scrapped[SCR_ERROR]:
-                raise ScrapperError(scrapped[SCR_ERROR])
+                print(scrapped[SCR_ERROR], type(scrapped[SCR_ERROR]))
+                raise Exception(scrapped[SCR_ERROR])
             else:
                 return get_url_state(url, self.get_ds_time(), scrapped[SCR_HTML])
         else:
@@ -110,7 +110,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         # TODO Something more fancy?
         fetch_time = state[ST_FETCH_TIME]
-        if fetch_time != None and self.get_ds_time() - fetch_time > CACHE_THRESHOLD_SECONDS: # One minute cache threshold. Only temporary
+        if fetch_time != None and abs(self.get_ds_time() - fetch_time) < CACHE_THRESHOLD_SECONDS: # One minute cache threshold. Only temporary
             return True
         return False
         

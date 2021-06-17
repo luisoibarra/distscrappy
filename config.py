@@ -1,12 +1,11 @@
-CENTRAL_ADDR = ("127.0.0.1",9001)
-NS_ADDR = ("127.0.0.1",9010)
-
+# Central node static addresses
 SERVER_NS_ZMQ_ADDRS = [
     (("127.0.0.1",9000), ("127.0.0.1",9010), ("127.0.0.1",9020)),
     (("127.0.0.1",9001), ("127.0.0.1",9011), ("127.0.0.1",9021)),
     (("127.0.0.1",9002), ("127.0.0.1",9012), ("127.0.0.1",9022)),
 ]
 
+# Test ring node addresses
 RING_ADDRS = [
     ("127.0.0.2",9002),
     ("127.0.0.2",9003),
@@ -17,4 +16,8 @@ RING_ADDRS = [
 
 ]
 
+# Test http server
 HTTP_TEST_SERVER_ADDR = ("127.0.0.5",9000)
+
+# Cache valid time
+CACHE_THRESHOLD_SECONDS = 60

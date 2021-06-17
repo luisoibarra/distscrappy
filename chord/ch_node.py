@@ -267,33 +267,37 @@ class ChordNode:
             
             # Register node in pyro name server and daemon
             self.dir = daemon.register(self)
-            try:
-                with locate_ns(self.name_servers) as ns:
-                    current_prefix = type(self).CHORD_NODE_PREFIX
-                    nodes = ns.list(prefix=current_prefix)
-                    
-                    id = self.hash(self.dir)
-                    name = type(self).node_name(id)
-                    try_amount = self.bits
-                    
-                    while try_amount > 0:
-                        if name not in nodes:
-                            self.id = id
-                            ns.register(name, self.dir)
-                            break
-                        import string
-                        random_string = "".join(random.choices(string.ascii_uppercase) for _ in range(20))
-                        id = self.hash(random_string)
+            node_registered = False
+            while self.running:
+                try:
+                    with locate_ns(self.name_servers) as ns:
+                        current_prefix = type(self).CHORD_NODE_PREFIX
+                        nodes = ns.list(prefix=current_prefix)
+                        
+                        id = self.hash(self.dir)
                         name = type(self).node_name(id)
-                        try_amount -= 1 
-                    else:
-                        raise ValueError("Can't add node to DHT table, is over populated")
-            except pyro.errors.NamingError :
-                log.info(f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
-                time.sleep(NS_TIME_RETRY)
-                self.start()        
-            except Exception as e:
-                pass
+                        try_amount = self.bits
+                        
+                        while try_amount > 0:
+                            if name not in nodes:
+                                self.id = id
+                                ns.register(name, self.dir)
+                                node_registered = True
+                                break
+                            import string
+                            random_string = "".join(random.choices(string.ascii_uppercase) for _ in range(20))
+                            id = self.hash(random_string)
+                            name = type(self).node_name(id)
+                            try_amount -= 1 
+                        else:
+                            raise ValueError("Can't add node to DHT table, is over populated")
+                except pyro.errors.NamingError :
+                    log.info(f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
+                    time.sleep(NS_TIME_RETRY)
+                if node_registered:
+                    break
+            else:
+                raise Exception(f"Node stopped")
             
             # Joining DHT
             self.join(initial_node)
@@ -308,15 +312,18 @@ class ChordNode:
         """
         Returns an initial Chord node, None if empty 
         """
-        try :
-            with locate_ns(self.name_servers) as ns:
-                availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
-        except pyro.errors.NamingError:
-            log.info(
-                f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
-            time.sleep(NS_TIME_RETRY)
-            self.initial_node()
-
+        while self.running:
+            try:
+                with locate_ns(self.name_servers) as ns:
+                    availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
+                break
+            except pyro.errors.PyroError:
+                log.info(
+                    f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
+                time.sleep(NS_TIME_RETRY)
+        else: # Cancelled 
+            raise Exception("Node stopped")            
+        
         while availables:
             node_name, node_address = random.choice([x for x in availables.items()])
             try:

@@ -1,6 +1,7 @@
 import time
-from shared.const import NS_TIME_RETRY
+from shared.const import NS_TIME_RETRY, NS_TRY_AMOUNT
 import Pyro4 as pyro
+from Pyro4.errors import CommunicationError
 import logging as log
 
 from Pyro4.core import Proxy, URI
@@ -29,21 +30,26 @@ def create_object_proxy(name, ns_addresses: list):
     return pyro.Proxy(object_uri)
 
 def locate_ns(ns_addresses: list):
-    exceptions = []
-    for ns_host, ns_port in ns_addresses:
+    amounts = NS_TRY_AMOUNT
+    while amounts > 0:
+        exceptions = []
+        for ns_host, ns_port in ns_addresses:
+            try:
+                ns = pyro.locateNS(ns_host, ns_port)
+                ns.ping() # Check if it is alive
+                return ns
+            except Exception as exc:
+                exceptions.append(exc)
         try:
-            ns = pyro.locateNS(ns_host, ns_port)
-            ns.ping() # Check if it is alive
-            return ns
-        except pyro.errors.NamingError:
+            raise exceptions[0]
+        except pyro.errors.PyroError:
             log.info(
-                f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
+                f"Can't locate a name servers... retrying in {NS_TIME_RETRY} seconds...")
             time.sleep(NS_TIME_RETRY)
-            return locate_ns(ns_addresses)
-        except Exception as exc:
-            exceptions.append(exc)
-    raise exceptions[0]
-        
+            amounts -= 1
+    else:
+        raise CommunicationError("Failed to locate name servers")
+
 def create_proxy(dir:URI)->pyro.Proxy:
     """
     Create an object proxy from the given dir
