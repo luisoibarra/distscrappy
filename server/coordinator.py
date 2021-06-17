@@ -115,7 +115,7 @@ class Coordinator(LoggerMixin):
             return
         timeout = 10000
         c_host,c_port = coordinator_dir
-        self.log_info(f"Coordinator {c_host}:{c_port} alive check")
+        self.log_debug(f"Coordinator {c_host}:{c_port} alive check")
         with self.context.socket(zmq.REQ) as sock_req:
             sock_req.connect(f"tcp://{c_host}:{c_port}")
             sock_req.send_json({

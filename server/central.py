@@ -69,6 +69,13 @@ class CentralNode(LoggerMixin):
                 if sync_ns_task is None or not sync_ns_task.running():
                     # Start name server update task
                     sync_ns_task = self.executor.submit(self.ns_sync.start)
+            else: # Non coordinator checks
+                if time_task is not None and time_task.running():
+                    ts.stop()
+                    time_task.result()
+                if sync_ns_task is not None and sync_ns_task.running():
+                    self.ns_sync.stop()
+                    sync_ns_task.result()
 
         self.log_info("Central Node Finished")
 
