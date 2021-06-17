@@ -22,6 +22,11 @@ def get_scrapped_info(html:str, error:str) -> SCRAPPED_INFO:
 
 URLHTMLDict = Dict[str,SCRAPPED_INFO] # Dictionary mapping each URL to corresponding HTML
 
+ServerInfo = Tuple[IP_DIR,IP_DIR,IP_DIR]
+SERV_SERV=0
+SERV_NS=1
+SERV_ZMQ=2
+
 
 URLS_KEY = "urls" # Json key for URLs 
 ERROR_KEY = "errors" # Json key for Errors

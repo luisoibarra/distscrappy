@@ -101,12 +101,13 @@ class ChordNode:
     
     id = property(_get_id, _set_id)
     
-    def __init__(self, host=None, port=0, name_server_host=None, name_server_port=None, forced_id=None, stabilization=True, bits:int=5):
+    def __init__(self, host=None, port=0, name_server_host=None, name_server_port=None, forced_id=None, stabilization=True, bits:int=5, ns_addresses=None):
         self.listeners:List[object] = []
         self.host = host
         self.port = port
-        self.name_server_host = name_server_host
-        self.name_server_port = name_server_port
+        self.name_servers = ns_addresses or []
+        if name_server_host is not None and name_server_port is not None:
+            self.name_servers = list(set(self.name_servers + [(name_server_host,name_server_port)]))
         self._id = None
         self.id = forced_id
         self.bits = bits
@@ -218,7 +219,7 @@ class ChordNode:
             log.exception(exc)
         
         try:
-            # coordinator = create_object_proxy(self.coordinator_address, self.name_server_host, self.name_server_port)
+            # coordinator = create_object_proxy(self.coordinator_address, self.name_servers)
             # coordinator.unregister(self.id)
             pass
         except Exception as exc:
@@ -265,7 +266,7 @@ class ChordNode:
             
             # Register node in pyro name server and deamon
             self.dir = daemon.register(self)
-            with pyro.locateNS(self.name_server_host, self.name_server_port) as ns:
+            with locate_ns(self.name_servers) as ns:
                 current_prefix = type(self).CHORD_NODE_PREFIX
                 nodes = ns.list(prefix=current_prefix)
                 
@@ -300,12 +301,12 @@ class ChordNode:
         """
         Returns an initial Chord node, None if empty 
         """
-        with pyro.locateNS(self.name_server_host, self.name_server_port) as ns:
+        with locate_ns(self.name_servers) as ns:
             availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
         while availables:
             node_name, node_address = random.choice([x for x in availables.items()])
             try:
-                node = create_object_proxy(node_name, self.name_server_host, self.name_server_port)
+                node = create_object_proxy(node_name, self.name_servers)
                 node_id = node.id # Check if node is alive
                 log.info(f"Returned initial node {node_id} with address {node_address}")
                 return node
@@ -361,7 +362,7 @@ class ChordNode:
         """
         Called when joining the DHT
         """
-        # coordinator = create_object_proxy(ChordCoordinator.ADDRESS, self.name_server_host, self.name_server_port)
+        # coordinator = create_object_proxy(ChordCoordinator.ADDRESS, self.name_servers)
         # coordinator.register(self.id, self.dir)
         pass
             
@@ -557,7 +558,7 @@ class ChordNode:
         Returns a Chord Node proxy for the given id
         """
         if id != self.id:
-            node = create_object_proxy(ChordNode.node_name(id), self.name_server_host, self.name_server_port)
+            node = create_object_proxy(ChordNode.node_name(id), self.name_servers)
         else:
             node = self
         return node

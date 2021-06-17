@@ -15,7 +15,7 @@ def start():
     executor = ThreadPoolExecutor()
 
     central_tasks = []
-    for i in range(len(SERVER_AND_NS_ADDRS)):
+    for i in range(len(SERVER_NS_ZMQ_ADDRS)):
         time.sleep(.5)
         central_task = executor.submit(ic.start,i)
         central_tasks.append(central_task)

@@ -1,3 +1,5 @@
+from server.name_server_sync import NSSync
+from server.coordinator import Coordinator
 from server.timing import TimeSynchronization
 from shared.logger import LoggerMixin
 from shared.const import *
@@ -6,24 +8,27 @@ from concurrent.futures import ThreadPoolExecutor, Future, CancelledError
 from chord.ch_ns import init_name_server 
 from server.ring import RingNode
 from server.receiver import HTTPRequestReceiver
-from chord.ch_shared import create_object_proxy
+from chord.ch_shared import create_object_proxy, locate_ns
 import random
 from shared.error import DistscrappyError
 import time
-from typing  import List
+from typing  import List, Tuple
 
 class CentralNode(LoggerMixin):
     """
     Central node that supports the name server and acts as client interface
     """
     
-    def __init__(self, ns_address:IP_DIR, client_interface_address:IP_DIR):
+    def __init__(self, ns_address:IP_DIR, client_interface_address:IP_DIR, zmq_address:IP_DIR, server_addresses: List[ServerInfo]):
         self.client_interface_address = client_interface_address
         self.ns_address = ns_address
+        self.server_addresses = server_addresses
+        self.zmq_address = zmq_address
         self.executor = ThreadPoolExecutor()
+        self.coordinator = Coordinator(self.zmq_address, [z for _,_,z in self.server_addresses])
+        self.ns_sync = NSSync([ns_address] + [x[SERV_NS] for x in server_addresses])
         self.receivers_tasks = None
         self.name_server_tasks = None
-        self.timing_tasks = None
         self.running = False
     
     def start(self):
@@ -32,7 +37,6 @@ class CentralNode(LoggerMixin):
         """
         self.name_server_tasks = []
         self.receivers_tasks = []
-        self.timing_tasks = []
 
         ns_task = self.executor.submit(self.name_server_loop)
         self.name_server_tasks.append(ns_task)
@@ -42,22 +46,30 @@ class CentralNode(LoggerMixin):
 
         time.sleep(1)
 
-        ts = TimeSynchronization()
-        host,port = self.ns_address
-        time_task = self.executor.submit(ts.startConnecting(host,port,self.executor))
-        self.timing_tasks.append(time_task)
-
-        
-
         for ns_task in self.name_server_tasks:
             ns_task.add_done_callback(self._task_finish_callback("Name server"))
         for rec_task in self.receivers_tasks:
             rec_task.add_done_callback(self._task_finish_callback("Receiver"))
+        
+        self.coordinator_task = self.executor.submit(self.coordinator.start)
 
+        ts = TimeSynchronization()
+        time_task = None
+        
+        sync_ns_task = None
+        
         self.running = True
         while self.running:
-           time.sleep(1)
-        
+            time.sleep(1)
+            if self.coordinator.is_coordinator: # Coordinator checks
+                if time_task is None or not time_task.running():
+                    # Start time sync task
+                    ns_adresses = [self.ns_address] + [x[SERV_NS] for x in self.server_addresses]
+                    time_task = self.executor.submit(ts.startConnecting, ns_adresses)
+                if sync_ns_task is None or not sync_ns_task.running():
+                    # Start name server update task
+                    sync_ns_task = self.executor.submit(self.ns_sync.start)
+
         self.log_info("Central Node Finished")
 
     def stop(self):
@@ -71,6 +83,7 @@ class CentralNode(LoggerMixin):
         self.log_debug("Shutting down executor")
         self.executor.shutdown()
         self.log_debug("Executor is shutdown")
+        self.coordinator.stop()
         self.running = False
 
 
@@ -94,7 +107,7 @@ class CentralNode(LoggerMixin):
         """
         Returns a name server proxy
         """
-        return pyro.locateNS(self.ns_address[0], self.ns_address[1])
+        return locate_ns([x[SERV_NS] for x in self.server_addresses])
     
     def name_server_loop(self):
         """
