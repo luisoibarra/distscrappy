@@ -1,3 +1,5 @@
+import time
+from shared.const import NS_TIME_RETRY
 import Pyro4 as pyro
 import logging as log
 
@@ -33,6 +35,11 @@ def locate_ns(ns_addresses: list):
             ns = pyro.locateNS(ns_host, ns_port)
             ns.ping() # Check if it is alive
             return ns
+        except pyro.errors.NamingError:
+            log.info(
+                f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
+            time.sleep(NS_TIME_RETRY)
+            return locate_ns(ns_addresses)
         except Exception as exc:
             exceptions.append(exc)
     raise exceptions[0]

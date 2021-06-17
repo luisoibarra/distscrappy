@@ -1,3 +1,4 @@
+from shared.const import NS_TIME_RETRY
 from typing import List,Dict
 import Pyro4 as pyro
 import Pyro4.util
@@ -264,29 +265,35 @@ class ChordNode:
             
             initial_node = self.initial_node()
             
-            # Register node in pyro name server and deamon
+            # Register node in pyro name server and daemon
             self.dir = daemon.register(self)
-            with locate_ns(self.name_servers) as ns:
-                current_prefix = type(self).CHORD_NODE_PREFIX
-                nodes = ns.list(prefix=current_prefix)
-                
-                id = self.hash(self.dir)
-                name = type(self).node_name(id)
-                try_amount = self.bits
-                
-                while try_amount > 0:
-                    if name not in nodes:
-                        self.id = id
-                        ns.register(name, self.dir)
-                        break
-                    import string
-                    random_string = "".join(random.choices(string.ascii_uppercase) for _ in range(20))
-                    id = self.hash(random_string)
+            try:
+                with locate_ns(self.name_servers) as ns:
+                    current_prefix = type(self).CHORD_NODE_PREFIX
+                    nodes = ns.list(prefix=current_prefix)
+                    
+                    id = self.hash(self.dir)
                     name = type(self).node_name(id)
-                    try_amount -= 1 
-                else:
-                    raise ValueError("Can't add node to DHT table, is over populated")
-                
+                    try_amount = self.bits
+                    
+                    while try_amount > 0:
+                        if name not in nodes:
+                            self.id = id
+                            ns.register(name, self.dir)
+                            break
+                        import string
+                        random_string = "".join(random.choices(string.ascii_uppercase) for _ in range(20))
+                        id = self.hash(random_string)
+                        name = type(self).node_name(id)
+                        try_amount -= 1 
+                    else:
+                        raise ValueError("Can't add node to DHT table, is over populated")
+            except pyro.errors.NamingError :
+                log.info(f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
+                time.sleep(NS_TIME_RETRY)
+                self.start()        
+            except Exception as e:
+                pass
             
             # Joining DHT
             self.join(initial_node)
@@ -301,8 +308,15 @@ class ChordNode:
         """
         Returns an initial Chord node, None if empty 
         """
-        with locate_ns(self.name_servers) as ns:
-            availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
+        try :
+            with locate_ns(self.name_servers) as ns:
+                availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
+        except pyro.errors.NamingError:
+            log.info(
+                f"Can't locate a name server... retrying in {NS_TIME_RETRY} seconds...")
+            time.sleep(NS_TIME_RETRY)
+            self.initial_node()
+
         while availables:
             node_name, node_address = random.choice([x for x in availables.items()])
             try:
