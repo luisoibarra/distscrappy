@@ -53,7 +53,9 @@ class Coordinator(LoggerMixin):
                     raise exc
             except Exception as exc:
                 self.log_exception(exc)
-                
+        
+        alive_task:Future = None
+        
         timeout_milliseconds = 3000 + random.randint(-1500,1500)
         while self.running:
             value = sock_rep.poll(timeout_milliseconds)
@@ -81,6 +83,14 @@ class Coordinator(LoggerMixin):
                         "sender":self.address,
                         "data":"OK"
                     })
+                
+                elif data["type"] == "ALIVE":
+                    self.log_debug(f"ALIVE received from {data['sender']}")
+                    sock_rep.send_json({
+                        "type":"ALIVE_RESPONSE",
+                        "sender":self.address,
+                        "data":"OK"
+                    })
                 else:
                     self.log_error(f"Invalid message type {data['type']}")
             elif self.coordinator_dir == None:
@@ -88,12 +98,38 @@ class Coordinator(LoggerMixin):
                     self.log_info(f"COORDINATOR is {self.address}")
                     self.is_coordinator = True
                     self.coordinator_dir = self.address
-                elif random.random() < 1/len(self.other_addresses): # Ideally only one start the coordination procedure
+                elif random.random() < 1/(len(self.other_addresses)+1): # Ideally only one start the coordination procedure
                     if not election_tasks: # Start first election
                         task = self.executor.submit(self.do_election_received, higher_addresses)
                         task.add_done_callback(finish_callback)
                         election_tasks.append(task)
-            
+            else: # Coordinator is not None
+                if (alive_task is None or alive_task.done()) and random.random() < 1/(len(self.other_addresses)+1): # Ideally there is one node checking the coordinator  
+                    alive_task = self.executor.submit(self.do_alive_check, self.coordinator_dir)
+                    
+    def do_alive_check(self, coordinator_dir:IP_DIR):
+        """
+        Check if coordinator is alive, in case of been dead reset_coordinator is called
+        """
+        if self.address == coordinator_dir: # I am alive
+            return
+        timeout = 10000
+        c_host,c_port = coordinator_dir
+        self.log_info(f"Coordinator {c_host}:{c_port} alive check")
+        with self.context.socket(zmq.REQ) as sock_req:
+            sock_req.connect(f"tcp://{c_host}:{c_port}")
+            sock_req.send_json({
+                "type":"ALIVE",
+                "sender":self.address,
+            })
+            value = sock_req.poll(timeout)
+            if value != zmq.POLLIN:
+                self.log_info(f"Coordinator Node {c_host}:{c_port} not responding after {timeout} milliseconds")
+                self.reset_coordinator()
+            else: # Coordinator is alive
+                data = sock_req.recv_json() 
+        
+    
     def do_election_received(self, higher_addresses: List[IP_DIR]):
         """
         Send election messages to heigher nodes and in case of been coordinator also send the 

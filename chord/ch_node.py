@@ -183,7 +183,7 @@ class ChordNode:
         """
         command = None
         help_msg="ft: print finger table\nid: print node id\nkeys: print local key:value\nsl: print successor list\nexit: shutdown chord node"
-        while True:
+        while self.running:
             command = input()
             if command == "ft":
                 print(self.finger_table)
@@ -204,6 +204,7 @@ class ChordNode:
         """
         Leave DHT table
         """
+        self.running = False
         try:
             # Update predecessor and successor and transfer the current keys
             successor_node = self.get_node_proxy(self.successor)
@@ -219,13 +220,15 @@ class ChordNode:
         except Exception as exc:
             log.exception(exc)
         
-        try:
-            # coordinator = create_object_proxy(self.coordinator_address, self.name_servers)
-            # coordinator.unregister(self.id)
-            pass
-        except Exception as exc:
-            log.exception(exc)
-            
+        log.info("Removing current node from name servers")
+        name = type(self).node_name(id)
+        for ns_addr in self.name_servers:
+            try:
+                with locate_ns([ns_addr]) as ns:
+                    ns.remove(name)
+            except Exception as exc:
+                log.exception(exc)
+                
         self.daemon.shutdown()
     
     def update_leaving_node(self, node_id, new_successor_id):

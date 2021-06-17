@@ -2,7 +2,7 @@ from functools import reduce
 
 from Pyro4.core import Proxy
 from shared.const import IP_DIR
-from typing import Dict, List
+from typing import Dict, List, Union
 from server.ring import RingNode
 import time
 from shared.logger import LoggerMixin
@@ -17,7 +17,7 @@ class TimeSynchronization(LoggerMixin):
         self.running = False
         
     
-    def startRecieveingClockTime(self, node:Proxy, client_data:Dict[float, Dict[str,float,Proxy]]):
+    def startRecieveingClockTime(self, node:Proxy, client_data:Dict[float, Dict[str,Union[float,Proxy]]]):
         '''
         receive clock time from a connected client
         '''
@@ -40,7 +40,7 @@ class TimeSynchronization(LoggerMixin):
         '''
 
         # datastructure used to store client id and clock data
-        client_data:Dict[float, Dict[str,float,Proxy]] = {}
+        client_data:Dict[float, Dict[str,Union[float,Proxy]]] = {}
         
         if executor is None:
             executor = ThreadPoolExecutor()
@@ -60,9 +60,9 @@ class TimeSynchronization(LoggerMixin):
                 #Al parecer como manda cada cliente en un hilo a q mande su ClockTime termina el for rapidisimo
                 #  y cuando va a sincronizarlos todos hay algunos que no han terminado
                 cond = True                                     # 
-                while(cond):                                    # Creo que esto ya se arregla con el cambio de la client data a local
-                    results=[task.done() for task in tasks]     #                    
-                    cond= not all(results)                      #    
+                while cond:                                     # Creo que esto ya se arregla con el cambio de la client data a local
+                    results = [task.done() for task in tasks]   #                    
+                    cond = not all(results)                     #    
                 self.synchronizeAllClocks(client_data)
             except Exception as e:
                 self.log_exception(e)
@@ -75,7 +75,7 @@ class TimeSynchronization(LoggerMixin):
         self.running = False
 
     # subroutine function used to fetch average clock difference
-    def getAverageClockDiff(self, client_data:Dict[float, Dict[str,float,Proxy]]):
+    def getAverageClockDiff(self, client_data:Dict[float, Dict[str,Union[float,Proxy]]]):
 
         time_difference_list = [client['time_difference'] for id, client in client_data.items()]
 
@@ -86,7 +86,7 @@ class TimeSynchronization(LoggerMixin):
         return average_clock_difference
 
 
-    def synchronizeAllClocks(self,client_data:Dict[float, Dict[str,float,Proxy]]):
+    def synchronizeAllClocks(self,client_data:Dict[float, Dict[str,Union[float,Proxy]]]):
         ''' 
         master sync thread function used to generate
         cycles of clock synchronization in the network 
