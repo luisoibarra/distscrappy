@@ -13,7 +13,7 @@ from config import *
 
 
 def start():
-    log.basicConfig(level=log.DEBUG)
+    log.basicConfig(level=log.INFO)
 
     executor = ThreadPoolExecutor()
 

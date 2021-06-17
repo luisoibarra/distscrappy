@@ -1,6 +1,6 @@
 from shared.const import *
 import json
-import http
+import http.client as http_c
 import random
 from typing import List,Dict
 
@@ -17,7 +17,7 @@ class DistcrappyClient:
         errors = []
         random.shuffle(server_dirs)
         for host, port in server_dirs:
-            conn = http.client.HTTPConnection(host, port)
+            conn = http_c.HTTPConnection(host, port)
             try:
                 urls = ['http://'+url for url in urls]
                 content = self.build_json_string(urls)
@@ -30,7 +30,7 @@ class DistcrappyClient:
                     return json_body
                 else:
                     errors.append(body.decode())
-            except http.client.error as exc:
+            except http_c.error as exc:
                 errors.append(exc.args[0])
         raise ConnectionError("\n".join(errors))
         

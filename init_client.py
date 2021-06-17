@@ -7,7 +7,7 @@ from config import *
 
 
 def start():
-    log.basicConfig(level=log.DEBUG)
+    log.basicConfig(level=log.INFO)
     client = DistcrappyClient([x for x,_,_ in SERVER_NS_ZMQ_ADDRS])
     client.start()
     
