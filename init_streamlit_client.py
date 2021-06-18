@@ -15,6 +15,8 @@ def start():
              fetch www.wikipedia.org www.instagram.com''')
 
     urls = st.text_input('url(s) input', value='evea.uh.cu').split(" ")
+    
+    html_code_chckbx = st.checkbox('Show html code', value=False)
 
     if st.button('fetch'):
         log.basicConfig(level=log.INFO)
@@ -30,7 +32,7 @@ def start():
             # Render the result, contained in a frame of size 200x200.
             components.html(html, width=800, height=600, scrolling=True)
 
-            if st.checkbox('Show html code',value=False):
+            if html_code_chckbx:
                 st.write(html)
 
         for url, error in errors.items():
