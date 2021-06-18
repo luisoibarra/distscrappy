@@ -9,22 +9,32 @@ def start():
     log.basicConfig(level=log.INFO)
 
     client = DistScrappyClient([x for x, _, _ in SERVER_NS_ZMQ_ADDRS])
-    while True:
-        
-        command, urls = input().split(" ")
-        if command.lower() == "fetch":
-            result = client.start(urls)
-            print(result)
-        elif command.lower() == "exit":
-            break
-        elif command.lower() == "help":
-            print('''Availables commands:\n
-             fetch URL1 URL2 URL3 [...] \n
-             exit\n
-             help\n
+
+    command=""
+
+    help_msg = '''Availables commands:\n
+             fetch URL1 URL2 URL3 [...]  <This command will fetch listed urls>\n
+             exit <This command will terminate client process>\n
+             help <This command will show this help message>\n
              \n
             Example:\n 
-             fetch www.wikipedia.org www.instagram.com''')
+             fetch www.wikipedia.org www.instagram.com'''
+
+    while True:
+        command= input()
+        if command.lower() == "exit":
+            break
+        elif command.lower() == "help":
+            print(help_msg)
+        
+        command,*args=command.split(" ")
+
+        if command.lower() == "fetch":
+            result = client.start(args)
+            print(result)
+        else:
+            print(help_msg)
+        
              
             
 
