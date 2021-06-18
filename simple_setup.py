@@ -8,7 +8,7 @@ from client.client import DistcrappyClient
 from concurrent.futures import ThreadPoolExecutor
 import time
 import logging as log
-import init_central as ic
+import simple_centrals as scs
 import simple_rings as sr
 import init_client as icl
 from config import *
@@ -19,7 +19,7 @@ def start():
 
     executor = ThreadPoolExecutor()
 
-    central_task = executor.submit(ic.start)
+    central_task = executor.submit(scs.start)
 
     time.sleep(.5)
     

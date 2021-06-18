@@ -5,6 +5,7 @@ import random
 from typing import List,Dict
 import streamlit as st
 import streamlit.components.v1 as components  # Import Streamlit
+import random as r
 
 
 
@@ -24,7 +25,8 @@ class DistcrappyClient:
             conn = http_c.HTTPConnection(host, port)
             try:
                 
-                urls = ['http://'+url if not url.startwith("http://") else url for url in urls]
+                urls = [url if url.find("http://")!= -1 else'http://' + url for url in urls]
+
                 content = self.build_json_string(urls)
                 conn.request("GET", "urls", content, {"Content-Length":len(content)})
                 resp = conn.getresponse()
@@ -48,23 +50,26 @@ class DistcrappyClient:
         }
         return json.dumps(json_dict)
 
-    def start(self):
-        while True:
-            url = st.text_input('url(s) input','www.etecsa.cu')
-            if st.button('exit'):
-                break
-            if st.button('fetch'):
-                try:
-                    result = self.get_urls(url)
+    def start(self,urls):
+        
+        try:
+            result = self.get_urls(urls)
 
-                    # Render the h1 block, contained in a frame of size 200x200.
-                    components.html(result,
-                width=200, height=200)
+            urls_html_dict,errors = result.values()
 
-                except Exception as exc:
-                    st.write(exc)
-            
-                st.info("Availables commands:\nfetch URL1 URL2 URL3 ...\n example: fetch www.wikipedia.org www.instagram.com")
+            for url, html in urls_html_dict.items():
+                
+                # Render the result, contained in a frame of size 200x200.
+                components.html(html, width=800, height=600, scrolling=True)
+                st.write(html)
+
+            for url,error in errors.items():
+                st.warning(url+" : "+error)
+
+
+        except Exception as exc:
+            st.write(exc)
+                
 
 
 # fetch http://www.cubaeduca.cu http://www.etecsa.cu http://www.uci.cu http://evea.uh.cu http://www.uo.edu.cu http://www.uclv.edu.cu http://covid19cubadata.uh.cu http://www.uh.cu
