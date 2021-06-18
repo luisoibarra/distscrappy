@@ -30,9 +30,8 @@ def create_object_proxy(name, ns_addresses: list):
     object_uri = ns.lookup(name)
     ro = create_proxy(object_uri)
     try:
-        ro._pyroTimeout = 0
-        ro.something_that_will_explode()
-        ro._pyroBind() # Check if the remote object is alive TODO PROBLEMA AQUI SE QUEDA PENDING
+        ro._pyroTimeout = 10 # Wait two seconds
+        ro._pyroBind() # Check if the remote object is alive
     except CommunicationError as exc:
         exc_time = time.time()
         log.warning(f"TEMPORARY REMOVING NAME {name}. DELAY {exc_time - enter_time}")
@@ -40,6 +39,9 @@ def create_object_proxy(name, ns_addresses: list):
         rem_time = time.time()
         log.warning(f"TEMPORARY REMOVED NAME {name}. DELAY {rem_time - exc_time}")
         raise exc
+    except TimeoutError as exc:
+        log.error("TIMEOUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT")
+        log.exception(exc)
     except Exception:
         exc_time = time.time()
         log.warning(f"TEMPORARY FUNCTION TEST FOR CREATING PROXY {name}. DELAY {exc_time - enter_time}")

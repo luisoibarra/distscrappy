@@ -1,3 +1,7 @@
+import Pyro4
+
+# Pyro4.config.COMMTIMEOUT = 10 # Max amount of seconds to wait for a pyro conenction
+
 # Central node static addresses
 SERVER_NS_ZMQ_ADDRS = [
     (("127.0.0.1",9000), ("127.0.0.1",9010), ("127.0.0.1",9020)),

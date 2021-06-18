@@ -117,7 +117,7 @@ class ChordNode:
         self.successor_list:List[object] = []
         self.stabilization = stabilization
         self.running = False
-        self.values:Dict[object,object]= {}
+        self.values:Dict[object,List[object]]= {}
         self.executor = ThreadPoolExecutor()
         self.finger_table = None
         
@@ -128,14 +128,22 @@ class ChordNode:
         """
         key = self.hash(value)
         if self.in_between(key, self.sum_id(self.predecessor, 1), self.sum_id(self.id, 1)):
-            equal_hash = self.values[key]
-            try:
-                return [x for x in equal_hash if self.equal(x, value)][0]
-            except IndexError:
-                raise KeyError(f"Value {value} not found in DHT")
+            return self.local_lookup(key, value)
         successor_id = self.find_successor(key)
         successor = self.get_node_proxy(successor_id)
         return successor.lookup(value)
+    
+    def local_lookup(self, key: int, value):
+        """
+        Returns the asociated value in this node in case of any. 
+        
+        Raise KeyError if not found.
+        """
+        equal_hash = self.values[key]
+        try:
+            return [x for x in equal_hash if self.equal(x, value)][0]
+        except IndexError:
+            raise KeyError(f"Value {value} not found in DHT")
     
     @method_logger
     def insert(self, value, key=None):
@@ -148,17 +156,24 @@ class ChordNode:
             key = self.hash(value)
         successor_id = self.find_successor(key)
         if successor_id == self.id:
-            if key in self.values:
-                try:
-                    self.values[key].remove(value) # Remove old value if exist
-                except ValueError:
-                    pass
-                self.values[key].append(value)
-            else:
-                self.values[key] = [value]
+            self.insert_local(key, value)
         else:
             successor = self.get_node_proxy(successor_id)
             successor.insert(value, key)
+    
+    @method_logger
+    def insert_local(self, key: int, value: object):
+        """
+        Insert the given value with given key in this node
+        """
+        if key in self.values:
+            try:
+                self.values[key].remove(value) # Remove old value if exist
+            except ValueError:
+                pass
+            self.values[key].append(value)
+        else:
+            self.values[key] = [value]
     
     @method_logger
     def register_listener(self, listener):
@@ -336,7 +351,7 @@ class ChordNode:
                 node_id = node.id # Check if node is alive
                 log.info(f"Returned initial node {node_id} with address {node_address}")
                 return node
-            except pyro.errors.CommunicationError:
+            except (pyro.errors.CommunicationError, pyro.errors.NamingError):
                 log.info(f"Node {node_name} offline")
                 availables.__delitem__(node_name)
         return None
