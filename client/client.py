@@ -19,7 +19,8 @@ class DistcrappyClient:
         for host, port in server_dirs:
             conn = http_c.HTTPConnection(host, port)
             try:
-                """urls = ['http://'+url for url in urls]"""
+                
+                urls = ['http://'+url if not url.startwith("http://") else url for url in urls]
                 content = self.build_json_string(urls)
                 conn.request("GET", "urls", content, {"Content-Length":len(content)})
                 resp = conn.getresponse()
