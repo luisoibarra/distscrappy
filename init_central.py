@@ -6,12 +6,13 @@ import logging as log
 from config import *
 from shared.const import *
 from typing import Tuple, List
+import plac
 
 def start(
     index:('index','option','i',int) = 0,
-    central_address:('central address','option','addr',str) = None,
-    ns_address:('name server address','option','addr',str) = None,
-    zmq_address:('zmq address','option','addr',str) = None,
+    central_address:('central address','option','c',str) = None,
+    ns_address:('name server address','option','ns',str) = None,
+    zmq_address:('zmq address','option','zmq',str) = None,
     addresses:('Server addresses','option','server',List[Tuple[IP_DIR,IP_DIR,IP_DIR]])=SERVER_NS_ZMQ_ADDRS
     ):
     log.basicConfig(level=log.DEBUG)
@@ -28,4 +29,4 @@ def start(
     central.start()
 
 if __name__ == "__main__":
-    start()
+    plac.call(start)

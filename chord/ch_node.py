@@ -119,7 +119,8 @@ class ChordNode:
         self.running = False
         self.values:Dict[object,object]= {}
         self.executor = ThreadPoolExecutor()
-
+        self.finger_table = None
+        
     @method_logger
     def lookup(self, value):
         """
@@ -177,6 +178,7 @@ class ChordNode:
             l.keys_relocated(keys)
     
     
+    @method_logger
     def cli_loop(self):
         """
         Command Line Interface to talk with ChordNode
@@ -441,7 +443,7 @@ class ChordNode:
             pred_old_successor_id = old_successor_node.predecessor
             if pred_old_successor_id != None and self.in_between(pred_old_successor_id, self.sum_id(self.id, 1), self.successor, equals=False):
                 self.successor = pred_old_successor_id
-        except pyro.errors.CommunicationError as exc:
+        except (pyro.errors.CommunicationError, pyro.errors.NamingError) as exc:
             log.error(f"{exc}")
             new_successor = self.search_posible_successor()
             self.successor = new_successor.id
@@ -459,7 +461,7 @@ class ChordNode:
             try:
                 predecessor_node = self.get_node_proxy(self.predecessor)
                 predecessor_node.id
-            except pyro.errors.CommunicationError as e:
+            except (pyro.errors.CommunicationError, pyro.errors.NamingError) as e:
                 log.info(f"Predecessor {self.predecessor} offline")
                 self.predecessor = None
 
@@ -620,7 +622,7 @@ class ChordNode:
                 node = self.get_node_proxy(node_id)
                 testing_proxy = node.id
                 return node
-            except pyro.errors.CommunicationError as exc:
+            except (pyro.errors.CommunicationError, pyro.errors.NamingError):
                 log.error(f"Node {node_id} offline.")
                 try:
                     self.successor_list.remove(node_id)
@@ -642,6 +644,6 @@ class ChordNode:
                     return node
         
         # raise ValueError(f"No available successor node") 
-        return self.id
+        return self
                     
                     

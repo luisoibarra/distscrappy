@@ -23,40 +23,83 @@ class NSSync(LoggerMixin):
         """
         Starts the name server synchronization process
         """
+        executor = ThreadPoolExecutor()
         
         sleep_time = 5
         self.running = True
         while self.running:
+            tasks:List[Future] = []
             addresses = {}
             addresses_per_ns = {}
-            for host,port in self.name_servers: # Fetch all name server data
-                self.log_debug(f"Fetching data from ns {host}:{port}")
+            
+            def ns_callback(future:Future):
+                """
+                Callback to update addresses
+                """
                 try:
-                    with locate_ns([(host, port)]) as ns:
-                        ns_addresses = ns.list()
-                    pyro_ns_name = "Pyro.NameServer"
-                    if pyro_ns_name in ns_addresses:
-                        ns_addresses.__delitem__(pyro_ns_name)
-                    addresses.update(ns_addresses)
-                    addresses_per_ns[(host,port)] = ns_addresses
-                except PyroError as e:
-                    self.log_info(f"Name server {host}:{port} {e.args[0]}")
+                    ns_addresses = future.result()
+                    if ns_addresses:
+                        addresses.update(ns_addresses)
+                        addresses_per_ns[ns_addr] = ns_addresses
+                except Exception:
+                    pass
+            
+            for ns_addr in self.name_servers: # Fetch all name server data
+                tasks.append(executor.submit(self.get_ns_items, ns_addr))
+                tasks[-1].add_done_callback(ns_callback)
+            
+            while not all(task.done() for task in tasks): # Barrier
+                time.sleep(.5)
+            tasks.clear()
+            
+            for ns_addr in self.name_servers: # Update name server data
+                tasks.append(executor.submit(self.update_ns, ns_addr, addresses_per_ns.get(ns_addr,{}), addresses))
 
-            for host,port in self.name_servers: # Update name server data
-                self.log_debug(f"Updating data to ns {host}:{port}")
-                try:
-                    with locate_ns([(host, port)]) as ns:
-                        for name,uri in addresses.items():
-                            # Check if ns has the key
-                            ns_saved_uri = addresses_per_ns[(host,port)].get(name, None) 
-                            if not ns_saved_uri:
-                                ns.register(name,uri)
-                            # TODO Check for posibles repeated names with different URIs
-                except PyroError as e:
-                    self.log_info(f"Name server {host}:{port} {e.args[0]}")
+            while not all(task.done() for task in tasks): # Barrier
+                time.sleep(.5)
+            tasks.clear()
+            
+            for ns_addr in addresses_per_ns:
+                self.log_error(f"TEMPORAL: {ns_addr} has {addresses_per_ns[ns_addr]}")
             
             time.sleep(sleep_time)
-            
+
+        executor.shutdown()
+    
+    def get_ns_items(self, ns_addr:IP_DIR)-> Dict[str,str]:
+        """
+        Returns the items from given name server
+        """
+        host, port = ns_addr
+        self.log_debug(f"Fetching data from ns {host}:{port}")
+        try:
+            with locate_ns([(host, port)], 2, 2) as ns:
+                ns_addresses = ns.list()
+            pyro_ns_name = "Pyro.NameServer"
+            if pyro_ns_name in ns_addresses:
+                ns_addresses.__delitem__(pyro_ns_name)
+            return ns_addresses
+        except PyroError as e:
+            self.log_info(f"Name server {host}:{port} {e.args[0]}")    
+            return None
+    
+    def update_ns(self, ns_addr: IP_DIR, ns_items: Dict[str,str], addresses: Dict[str,str]):
+        """
+        Update the given name server with given addresses
+        """
+        host, port = ns_addr
+        self.log_debug(f"Updating data to ns {host}:{port}")
+        try:
+            with locate_ns([(host, port)], 2, 2) as ns:
+                for name,uri in addresses.items():
+                    # Check if ns has the key
+                    ns_saved_uri = ns_items.get(name, None) 
+                    if not ns_saved_uri:
+                        ns.register(name,uri)
+                    # TODO Check for posibles repeated names with different URIs
+        except PyroError as e:
+            self.log_info(f"Name server {host}:{port} {e.args[0]}")
+    
     def stop(self):
         """
         Stops the name server synchronization process
