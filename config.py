@@ -16,6 +16,9 @@ RING_ADDRS = [
 
 ]
 
+# server address to deploy client fetched html
+DEPLOY_SERVER_ADDR = ("127.0.0.3",9000)
+
 # Test http server
 HTTP_TEST_SERVER_ADDR = ("127.0.0.5",9000)
 

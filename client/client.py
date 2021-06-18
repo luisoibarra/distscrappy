@@ -3,6 +3,10 @@ import json
 import http.client as http_c
 import random
 from typing import List,Dict
+import streamlit as st
+import streamlit.components.v1 as components  # Import Streamlit
+
+
 
 class DistcrappyClient:
     
@@ -45,20 +49,22 @@ class DistcrappyClient:
         return json.dumps(json_dict)
 
     def start(self):
-        command = ""
         while True:
-            command = input()
-            if command == "exit":
+            url = st.text_input('url(s) input','www.etecsa.cu')
+            if st.button('exit'):
                 break
-            command, *args = command.split(" ")
-            if command == "fetch":
+            if st.button('fetch'):
                 try:
-                    result = self.get_urls(args)
-                    print(result)
+                    result = self.get_urls(url)
+
+                    # Render the h1 block, contained in a frame of size 200x200.
+                    components.html(result,
+                width=200, height=200)
+
                 except Exception as exc:
-                    print(exc)
-            else:
-                print("Availables commands:\nfetch URL1 URL2 URL3 ...\n example: fetch www.wikipedia.org www.instagram.com")
+                    st.write(exc)
+            
+                st.info("Availables commands:\nfetch URL1 URL2 URL3 ...\n example: fetch www.wikipedia.org www.instagram.com")
 
 
 # fetch http://www.cubaeduca.cu http://www.etecsa.cu http://www.uci.cu http://evea.uh.cu http://www.uo.edu.cu http://www.uclv.edu.cu http://covid19cubadata.uh.cu http://www.uh.cu

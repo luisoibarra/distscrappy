@@ -1,3 +1,4 @@
+import streamlit as st
 """
 Start a DistscrappyClient connected to specified server in config.py
 """
