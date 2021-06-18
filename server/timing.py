@@ -59,6 +59,8 @@ class TimeSynchronization(LoggerMixin):
 
                 #Al parecer como manda cada cliente en un hilo a q mande su ClockTime termina el for rapidisimo
                 #  y cuando va a sincronizarlos todos hay algunos que no han terminado
+                
+                #Simulation of a Barrier TODO se puede poner un Barrier del modulo threading
                 cond = True                                     # 
                 while cond:                                     # Creo que esto ya se arregla con el cambio de la client data a local
                     results = [task.done() for task in tasks]   #                    
