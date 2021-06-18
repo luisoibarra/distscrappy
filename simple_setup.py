@@ -4,7 +4,7 @@ Start a simple Distscrappy network based on config.py
 
 from server.central import CentralNode
 from server.ring import RingNode
-from client.client import DistcrappyClient
+from client.client import DistScrappyClient
 from concurrent.futures import ThreadPoolExecutor
 import time
 import logging as log

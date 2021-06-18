@@ -3,13 +3,10 @@ import json
 import http.client as http_c
 import random
 from typing import List,Dict
-import streamlit as st
-import streamlit.components.v1 as components  # Import Streamlit
-import random as r
 
 
 
-class DistcrappyClient:
+class DistScrappyClient:
     
     def __init__(self, server_dirs:List[IP_DIR]):
         self.server_dirs = server_dirs
@@ -53,22 +50,10 @@ class DistcrappyClient:
     def start(self,urls):
         
         try:
-            result = self.get_urls(urls)
-
-            urls_html_dict,errors = result.values()
-
-            for url, html in urls_html_dict.items():
-                
-                # Render the result, contained in a frame of size 200x200.
-                components.html(html, width=800, height=600, scrolling=True)
-                st.write(html)
-
-            for url,error in errors.items():
-                st.warning(url+" : "+error)
-
+            return self.get_urls(urls)
 
         except Exception as exc:
-            st.write(exc)
+            raise exc
                 
 
 
