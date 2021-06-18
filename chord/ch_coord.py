@@ -93,7 +93,7 @@ class ChordCoordinator:
         if self.node_addresses:
             node_id, node_address = random.choice([x for x in self.node_addresses.items()])
             try:
-                node = pyro.Proxy(node_address)
+                node = create_proxy(node_address)
                 log.info(f"Returned initial node {node_id} with address {node_address}")
                 return node.id
             except pyro.errors.CommunicationError:

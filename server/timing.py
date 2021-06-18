@@ -8,7 +8,7 @@ import time
 from shared.logger import LoggerMixin
 import Pyro4 as pyro
 from concurrent.futures import ThreadPoolExecutor
-from chord.ch_shared import create_proxy, locate_ns
+from chord.ch_shared import create_object_proxy, create_proxy, locate_ns
 
 
 class TimeSynchronization(LoggerMixin):
@@ -39,22 +39,26 @@ class TimeSynchronization(LoggerMixin):
         accepting clients over given port
         '''
 
-        # datastructure used to store client id and clock data
-        client_data:Dict[float, Dict[str,Union[float,Proxy]]] = {}
-        
         if executor is None:
             executor = ThreadPoolExecutor()
 
         self.running = True
         # fetch clock time at slaves / clients
         while self.running:
+            # datastructure used to store client id and clock data
+            client_data:Dict[float, Dict[str,Union[float,Proxy]]] = {}
+            
             try:
                 with locate_ns(ns_addresses) as ns:
                     availables = ns.list(prefix = RingNode.CHORD_NODE_PREFIX)
 
                 tasks = []
                 for client_name , client_address in availables.items():
-                    node:Proxy = create_proxy(client_address)
+                    try:
+                        node:Proxy = create_object_proxy(client_name, ns_addresses)
+                    except pyro.errors.PyroError as exc:
+                        self.log_info(f"Error creating proxy for {client_name}")
+                        continue
                     tasks.append(executor.submit(self.startRecieveingClockTime, node,client_data))
 
                 #Al parecer como manda cada cliente en un hilo a q mande su ClockTime termina el for rapidisimo

@@ -25,12 +25,50 @@ def create_object_proxy(name, ns_addresses: list):
     """
     Create an object proxy from the given name 
     """
+    enter_time = time.time()
     ns = locate_ns(ns_addresses)
     object_uri = ns.lookup(name)
-    return pyro.Proxy(object_uri)
+    ro = create_proxy(object_uri)
+    try:
+        ro._pyroTimeout = 0
+        ro.something_that_will_explode()
+        ro._pyroBind() # Check if the remote object is alive TODO PROBLEMA AQUI SE QUEDA PENDING
+    except CommunicationError as exc:
+        exc_time = time.time()
+        log.warning(f"TEMPORARY REMOVING NAME {name}. DELAY {exc_time - enter_time}")
+        remove_name_from_ns(name, ns_addresses, object_uri)
+        rem_time = time.time()
+        log.warning(f"TEMPORARY REMOVED NAME {name}. DELAY {rem_time - exc_time}")
+        raise exc
+    except Exception:
+        exc_time = time.time()
+        log.warning(f"TEMPORARY FUNCTION TEST FOR CREATING PROXY {name}. DELAY {exc_time - enter_time}")
+    return ro
 
-def locate_ns(ns_addresses: list):
-    amounts = NS_TRY_AMOUNT
+def remove_name_from_ns(name:str, ns_addresses: list, current_value=None):
+    """
+    Remove given name from name servers located at ns_addresses.  
+    
+    if current_value is given then the value in the name server must be equal in order to 
+    remove the name 
+    """
+    ns_addresses = ns_addresses.copy()
+    while ns_addresses:
+        addr = ns_addresses.pop()
+        try:
+            with locate_ns([addr], 2, 1) as ns:
+                if current_value:
+                    value = ns.lookup(name)
+                    if value != current_value:
+                        continue
+                ns.remove(name)
+        except Exception as exc:
+            log.debug(f"Error removing {name} name server located at {addr}. {exc}")
+            
+def locate_ns(ns_addresses: list, amounts:int=NS_TRY_AMOUNT, retry_time:int=NS_TIME_RETRY)->pyro.Proxy:
+    """
+    Returns a responding name server among the ns_addresses
+    """
     while amounts > 0:
         exceptions = []
         for ns_host, ns_port in ns_addresses:
@@ -44,11 +82,11 @@ def locate_ns(ns_addresses: list):
             raise exceptions[0]
         except pyro.errors.PyroError:
             log.info(
-                f"Can't locate a name servers... retrying in {NS_TIME_RETRY} seconds...")
-            time.sleep(NS_TIME_RETRY)
+                f"Can't locate the name servers {ns_addresses}. Retrying in {retry_time} seconds...")
+            time.sleep(retry_time)
             amounts -= 1
-    else:
-        raise CommunicationError("Failed to locate name servers")
+
+    raise CommunicationError("Failed to locate name servers")
 
 def create_proxy(dir:URI)->pyro.Proxy:
     """
