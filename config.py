@@ -33,7 +33,10 @@ STORAGE_ADDR = ("127.0.0.4", 9000)
 HTTP_TEST_SERVER_ADDR = ("127.0.0.5",9000)
 
 # Cache valid time
-CACHE_THRESHOLD_SECONDS = 60
+CACHE_THRESHOLD_SECONDS = 120
 
-# Write amount order to save state
-WRITE_AMOUNT_SAVE_STATE = 1
+# Clock syncronization delay
+CLOCK_SYNC_DELAY_SECONDS = 40
+
+# Write amount needed to save node state
+WRITE_AMOUNT_SAVE_STATE = 10
