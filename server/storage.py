@@ -1,21 +1,16 @@
-from server.name_server_sync import NSSync
-from server.coordinator import Coordinator
-from server.timing import TimeSynchronization
 from shared.logger import LoggerMixin
 from shared.const import *
 import Pyro4 as pyro
-from concurrent.futures import ThreadPoolExecutor, Future, CancelledError
-from chord.ch_ns import init_name_server 
-from server.ring import RingNode
-from server.receiver import HTTPRequestReceiver
-from chord.ch_shared import create_object_proxy, locate_ns
-import random
+from chord.ch_shared import locate_ns
 from shared.error import StorageError
 import time
 from typing  import List, Dict
 import json
 import os
+from threading import Lock
 
+
+@pyro.expose
 class StorageNode(LoggerMixin):
     """
     Handles Storage
@@ -23,28 +18,99 @@ class StorageNode(LoggerMixin):
     
     DATA_BASE_PATH = "data"
     
-    def save_entries(self, entries: Dict[int, List[URLState]]):
+    FILE_PREFIX = "node_entries"
+    
+    NAME_PREFIX = "storage"
+    
+    def __init__(self, ns_dirs: List[IP_DIR], node_dir: IP_DIR) -> None:
+        self.rw_mutex: Dict[int,Lock] = {} # Mutex for read-write operation on given node 
+        self.dict_mutex = Lock() # For keeping re_mutex dictionary consistent
+        self.acquire_mutex = Lock() # Avoid posible dead lock when requesting same nodes at the same time  
+        base = type(self).DATA_BASE_PATH
+        self.ns_dirs = ns_dirs
+        self.node_dir = node_dir
+        if not os.path.isdir(base):
+            os.mkdir(base)
+        self.running = False
+            
+    def _get_lock(self, id:int)->Lock:
+        """
+        Returns the lock object for given id
+        """
+        with self.dict_mutex:
+            lock = self.rw_mutex.get(id,None)
+            if lock is None:
+                lock = Lock()
+                self.rw_mutex[id] = lock
+            return lock
+    
+    def _acquire_multiple(self, ids: List[int]):
+        """
+        Acquire at the same time multiple id locks
+        """
+        with self.acquire_mutex:
+            self.log_debug(f"Acquiring {ids}")
+            locks = [self._get_lock(id) for id in ids]
+            for l in locks:
+                l.acquire()
+    
+    def _release_multiple(self, ids: List[int]):
+        """
+        Release at the same time multiple id lock
+        """
+        with self.acquire_mutex:
+            self.log_debug(f"Releasing {ids}")
+            locks = [self._get_lock(id) for id in ids]
+            for l in locks:
+                l.release()
+    
+    def start(self):
+        """
+        Starts storage node service
+        """
+        
+        self.running = True
+        with pyro.Daemon(self.node_dir[0], self.node_dir[1]) as daemon:
+            dir = daemon.register(self)
+        
+            with locate_ns(self.ns_dirs) as ns:
+                ns.register(type(self).NAME_PREFIX, dir)
+            
+            self.log_info("Storage Node Started")
+            daemon.requestLoop(lambda : self.running)
+    
+    def stop(self):
+        """
+        Stops storage node service
+        """
+        self.running = False
+        
+    
+    def save_entries(self, entries_dict: Dict[int, List[URLState]]):
         """
         Save the entries into the database
         """
-        self.log_info(f"Saving entries {list(entries.keys())}")
+        self.log_info(f"Saving entries {list(entries_dict.keys())}")
         
+        self._acquire_multiple(list(entries_dict.keys()))
         prev_values: Dict[int, List[URLState]] = {}
         
-        for id, entries in entries.items():
+        for id, entries in entries_dict.items():
             try:
                 # Saving previous entries in case of failure
-                entry = self.load_entry_json(id)
+                entry = self._load_entry_json(id)
                 prev_values[id] = entry
                 
-                self.save_entry_json(id, entries)
+                self._save_entry_json(id, entries)
                 self.log_debug(f"Entries for id {id} saved")
             except Exception as exc:
                 self.log_error(f"Entry {id} save error: {exc}")
                 # Restore values to previous state
                 for id, entries in prev_values.items():
-                    self.save_entry_json(id, entries)
+                    self._save_entry_json(id, entries)
+                self._release_multiple(list(entries_dict.keys()))
                 raise StorageError(str(exc))
+        self._release_multiple(list(entries_dict.keys()))
     
     def get_entries(self, ids: List[int])-> Dict[int, List[URLState]]:
         """
@@ -52,51 +118,55 @@ class StorageNode(LoggerMixin):
         """
         self.log_info(f"Getting entries for {ids}")
         
+        self._acquire_multiple(ids)
         entries: Dict[int, List[URLState]] = {}
         
         for id in ids:
             try:
-                id_entries = self.load_entry_json(id)
-                entries[id] = id_entries
+                id_entries = self._load_entry_json(id)
+                if id_entries:
+                    entries[id] = id_entries
                 self.log_debug(f"Entry for {id} fetched")
             except Exception as exc:
                 self.log_error(f"Entry {id} error: {exc}")
+                self._release_multiple(ids)
                 raise StorageError(str(exc))
         
+        self._release_multiple(ids)
         return entries
     
-    def get_json_path(self, id):
+    def _get_json_path(self, id):
         """
         Returns the name for the json file associated with given id
         """
-        return os.path.join(type(self).DATA_BASE_PATH, f"{id}.json")
+        return os.path.join(type(self).DATA_BASE_PATH, f"{type(self).FILE_PREFIX}{id}.json")
     
-    def save_entry_json(self, id: int, entries: List[URLState]):
+    def _save_entry_json(self, id: int, entries: List[URLState]):
         """
         Saves the entries into a json file
         """
-        with open(self.get_json_path(id), mode='w') as file:
+        with open(self._get_json_path(id), mode='w') as file:
             json.dump(entries, file)
     
-    def init_json_file(self, id: int):
+    def _init_json_file(self, id: int):
         """
         Creates the initial json file with an empty list if doesn't exist
         """
-        filename = self.get_json_path(id)
+        filename = self._get_json_path(id)
         try:
             with open(filename, mode="x") as file:
                 json.dump([],file)
         except FileExistsError:
             pass
         
-    def load_entry_json(self, id: int)-> List[URLState]:
+    def _load_entry_json(self, id: int)-> List[URLState]:
         """
         Returns the data entries associated with given id
         """
         
-        self.init_json_file(id)
+        self._init_json_file(id)
         
-        filename = self.get_json_path(id)
+        filename = self._get_json_path(id)
         with open(filename) as file:
             return json.load(file)
         

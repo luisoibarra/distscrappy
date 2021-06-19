@@ -20,8 +20,14 @@ RING_ADDRS = [
 
 ]
 
+# Test Storage node address
+STORAGE_ADDR = ("127.0.0.3", 9000)
+
 # Test http server
 HTTP_TEST_SERVER_ADDR = ("127.0.0.5",9000)
 
 # Cache valid time
 CACHE_THRESHOLD_SECONDS = 60
+
+# Write amount order to save state
+WRITE_AMOUNT_SAVE_STATE = 10

@@ -27,10 +27,14 @@ data2 = {
         ("url8", 1, "html8"),
     ],
 }
-
+log.basicConfig(level=log.DEBUG)
 
 storage = StorageNode()
 
 storage.save_entries(data1)
+storage.save_entries(data2)
 
 data1_fetched = storage.get_entries([1,2])
+
+print("Data1\n",data1)
+print("Data1 fetched\n",data1_fetched)

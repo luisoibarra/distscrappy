@@ -1,9 +1,10 @@
 from shared.clock import ClockMixin
-from chord.ch_node import ChordNode
-from chord.ch_shared import create_object_proxy, method_logger
+from chord.ch_node import ChordNode, sum_id
+from chord.ch_shared import create_object_proxy, locate_ns, method_logger
 from typing import List,Dict,Tuple
 from shared.const import *
-from config import CACHE_THRESHOLD_SECONDS
+from config import CACHE_THRESHOLD_SECONDS, WRITE_AMOUNT_SAVE_STATE
+from server.storage import StorageNode
 from shared.logger import LoggerMixin
 from server.fetcher import URLFetcher
 from shared.error import ScrapperError
@@ -17,6 +18,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fetcher = URLFetcher()
+        self.writes_amount = 0
     
     def is_responsible_for(self, id:int)->bool:
         """
@@ -66,6 +68,10 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
 
         return url_html_dict
     
+    def create_other_tasks(self):
+        super().create_other_tasks()
+        self.load_entries()
+    
     @method_logger
     def insert_state(self, state:URLState):
         """
@@ -75,6 +81,9 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         succ = self.find_successor(state_hash)
         succ_node = self.get_node_proxy(succ)
         succ_node.insert(state)
+        self.writes_amount += 1
+        if self.writes_amount >= WRITE_AMOUNT_SAVE_STATE:
+            self.save_entries()
     
     @method_logger
     def fetch_url(self, url:str, state_checked:bool=False)->URLState:
@@ -104,6 +113,58 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             node = self.get_node_proxy(suc)
             return node.fetch_url(url)
     
+    @method_logger
+    def save_entries(self):
+        """
+        Save node entries
+        """
+        try:
+            storage = create_object_proxy(StorageNode.NAME_PREFIX, self.name_servers)
+            self.log_info(f"Saving node entries")
+            storage.save_entries(self.values)
+        except Exception as exc:
+            self.log_exception(exc)
+        
+    @method_logger
+    def load_entries(self):
+        """
+        Load node entries
+        """
+        # Getting current node ids
+        entries = []
+        lwb = i = sum_id(self.predecessor, 1, self.bits)
+        upb = sum_id(self.id, 1, self.bits)
+        first = True
+        while self.in_between(i, lwb, upb, first) and len(entries) < 300:
+            entries.append(i)
+            i = sum_id(i, 1, self.bits)
+            first = i != upb
+        self.log_info(f"Loading node entries {entries}")
+        try:
+            storage = create_object_proxy(StorageNode.NAME_PREFIX, self.name_servers)
+            save_entries = storage.get_entries(entries)
+            self.update_state_values(save_entries)
+        except Exception as exc:
+            self.log_exception(exc)
+        
+    def update_state_values(self, new_states: Dict[int,List[URLState]]):
+        """
+        Update values with given values taking in count posible conflicts.
+        """
+        values = {}
+        for i in new_states:
+            current_entries = self.values.get(i, [])
+            for entry in new_states[i]:
+                try:
+                    saved = next(x for x in current_entries if x[ST_URL] == entry[ST_URL])
+                    if saved[ST_FETCH_TIME] < entry[ST_FETCH_TIME]:
+                        current_entries.remove(saved)
+                        current_entries.append(entry)
+                except StopIteration:
+                    current_entries.append(entry)
+            values[i] = current_entries
+        self.update_values(values)
+                
     def is_cache_valid(self, state:URLState):
         """
         Return if the HTML is valid to return to the client 

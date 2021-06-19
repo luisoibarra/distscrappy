@@ -321,11 +321,17 @@ class ChordNode:
             
             # Joining DHT
             self.join(initial_node)
-
+            self.executor.submit(self.create_other_tasks)
             daemon.requestLoop()
             self.daemon = None
         
         self.running = False
+    
+    def create_other_tasks(self):
+        """
+        Create other tasks after a successful node start
+        """
+        pass
     
     @method_logger
     def initial_node(self):
