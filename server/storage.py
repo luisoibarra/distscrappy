@@ -163,6 +163,8 @@ class StorageNode(LoggerMixin):
         """
         Returns the data entries associated with given id
         """
+        if not os.path.exists(self._get_json_path(id)):
+            return []
         
         self._init_json_file(id)
         

@@ -1,7 +1,7 @@
 from shared.clock import ClockMixin
 from chord.ch_node import ChordNode, sum_id
 from chord.ch_shared import create_object_proxy, locate_ns, method_logger
-from typing import List,Dict,Tuple
+from typing import List,Dict,Tuple, Union
 from shared.const import *
 from config import CACHE_THRESHOLD_SECONDS, WRITE_AMOUNT_SAVE_STATE
 from server.storage import StorageNode
@@ -11,6 +11,7 @@ from shared.error import ScrapperError
 from Pyro4 import URI
 import Pyro4 as pyro
 import time
+import hashlib
 
 @pyro.expose
 class RingNode(LoggerMixin,ClockMixin, ChordNode):
@@ -40,11 +41,13 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         return list_value[0] == lookup_value
 
-    def url_hash(self, url:str):
+    def url_hash(self, url:Union[URI, str, int]):
         """
         Hash function used to get urls hash
         """
-        return super().hash(url)
+        h = hashlib.sha256()
+        h.update(str(url).encode())
+        return int(h.hexdigest(), 16) % self.max_nodes
     
     def get_urls(self, urls:List[str])->URLHTMLDict:
         """
@@ -119,16 +122,16 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         Save node entries
         """
         try:
-            storage = create_object_proxy(StorageNode.NAME_PREFIX, self.name_servers)
-            self.log_info(f"Saving node entries")
+            storage = self.get_storage_node()
             storage.save_entries(self.values)
+            self.log_info(f"Node entries saved")
         except Exception as exc:
             self.log_exception(exc)
-        
-    @method_logger
-    def load_entries(self):
+    
+    
+    def get_entries_to_load(self):
         """
-        Load node entries
+        Get the entries between predecessor + 1 and id
         """
         # Getting current node ids
         entries = []
@@ -139,14 +142,45 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             entries.append(i)
             i = sum_id(i, 1, self.bits)
             first = i != upb
-        self.log_info(f"Loading node entries {entries}")
-        try:
-            storage = create_object_proxy(StorageNode.NAME_PREFIX, self.name_servers)
-            save_entries = storage.get_entries(entries)
-            self.update_state_values(save_entries)
-        except Exception as exc:
-            self.log_exception(exc)
-        
+        return entries
+            
+    @method_logger
+    def load_entries(self):
+        """
+        Load node entries
+        """
+        while self.running: # Active until the storage node is found
+            try:
+                entries = self.get_entries_to_load()
+                self.log_info(f"Loading node entries {entries}")
+                storage = self.get_storage_node()
+                save_entries = storage.get_entries(entries)
+                self.update_state_values(save_entries)
+                self.log_info(f"Info loaded from storage")
+                break
+            except Exception as exc:
+                self.log_error(str(exc))
+    
+    def get_storage_node(self)-> StorageNode:
+        """
+        Returns an object proxy of the storage node
+        """
+        attempt = 2
+        exc = None
+        while attempt > 0:
+            try:
+                storage = create_object_proxy(StorageNode.NAME_PREFIX, self.name_servers)
+                return storage
+            except Exception as ex:
+                exc = ex
+                attempt -= 1
+                time.sleep(10)
+        raise exc
+    
+    def leave(self):
+        self.save_entries()
+        return super().leave()
+    
     def update_state_values(self, new_states: Dict[int,List[URLState]]):
         """
         Update values with given values taking in count posible conflicts.

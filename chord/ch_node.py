@@ -207,7 +207,7 @@ class ChordNode:
             elif command == "id":
                 print(self.id)
             elif command == "keys":
-                print("\n".join([f"- {x}:{self.values[x]}" for x in self.values]))
+                print("\n".join([f"- {x}:{str(self.values[x])[:100]}" for x in self.values]))
             elif command == "sl":
                 print(self.successor_list)
             elif command == "exit":
@@ -278,8 +278,6 @@ class ChordNode:
         """
         self.running = True
         
-        self.executor.submit(self.cli_loop)
-        
         with pyro.Daemon(self.host, self.port) as daemon:
             self.daemon = daemon
             
@@ -331,7 +329,7 @@ class ChordNode:
         """
         Create other tasks after a successful node start
         """
-        pass
+        self.executor.submit(self.cli_loop)
     
     @method_logger
     def initial_node(self):
@@ -449,6 +447,8 @@ class ChordNode:
         while self.running:
             try:
                 self.stabilize()
+            except TypeError as exc:
+                log.error(str(exc))
             except Exception as exc:
                 log.exception(exc)
             time.sleep(interval_milliseconds/1000)
