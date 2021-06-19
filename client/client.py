@@ -26,7 +26,6 @@ class DistcrappyClient:
             try:
                 
                 urls = [url if url.find("http://")!= -1 else'http://' + url for url in urls]
-
                 content = self.build_json_string(urls)
                 conn.request("GET", "urls", content, {"Content-Length":len(content)})
                 resp = conn.getresponse()

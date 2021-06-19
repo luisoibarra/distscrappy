@@ -1,8 +1,8 @@
 class DistscrappyError(Exception):
-
-    @property
-    def message(self):
-        return self.args[0]
+    pass
 
 class ScrapperError(DistscrappyError):
+    pass
+
+class StorageError(DistscrappyError):
     pass

@@ -7,7 +7,11 @@ import os.path as path
 import os
 
 def init_name_server(ns_host:str=None, ns_port:int=0):
-    filename = f"data_{ns_host}_{ns_port}.sql"
+    try:
+        os.mkdir("data")
+    except FileExistsError:
+        pass
+    filename = os.path.join("data",f"ns_data_{ns_host}_{ns_port}.sql")
     if not path.isfile(filename):
         fd = open(filename, 'x')
         fd.close()
@@ -17,7 +21,11 @@ def init_name_server(ns_host:str=None, ns_port:int=0):
 def main(ns_host:("Pyro name server host","option","nsh",str)=None,
          ns_port:("Pyro name server port","option","nsp",int)=None):
 
-    filename = f"data_{ns_host}_{ns_port}.sql"
+    try:
+        os.mkdir("data")
+    except FileExistsError:
+        pass
+    filename = os.path.join("data",f"ns_data_{ns_host}_{ns_port}.sql")
     args = ["python3", "-m", "Pyro4.naming"]
     if ns_host != None and ns_port != None:
         args.extend(["-n", ns_host, "-p", str(ns_port),"-s",f"sql:{filename}"])
