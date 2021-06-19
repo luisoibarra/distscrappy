@@ -26,7 +26,7 @@ def start():
         elif command.lower() == "help":
             print(help_msg)
         
-        command,*args=command.split(" ")
+        command,*args=command.split()
 
         if command.lower() == "fetch":
             result = client.start(args[1:], int(args[0]))

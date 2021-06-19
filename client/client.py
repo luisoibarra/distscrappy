@@ -11,13 +11,13 @@ class DistScrappyClient:
     def __init__(self, server_dirs:List[IP_DIR]):
         self.server_dirs = server_dirs
         
-    def get_urls(self, urls:List[str],deep_level:int)->LEVEL_SCRAPING_DICT:
+    def get_urls(self, urls:List[str],deep_level:int):
         """
         Request given urls.
         """
         server_dirs = self.server_dirs.copy()
         errors = []
-        levels : LEVEL_SCRAPING_DICT = LEVEL_SCRAPING_DICT
+        levels = {}
 
         random.shuffle(server_dirs)
         for host, port in server_dirs:
@@ -25,15 +25,16 @@ class DistScrappyClient:
             try:
 
                 actual_deep = 0
-                urls_domains = []
+                urls_domains = [url[8:] if url[:7].find("http://") != -1 else url for url in urls]
                 scrapped_urls = []
 
                 while(actual_deep<=deep_level):
                 
-                    urls = [url if url.find("http://")!= -1 else'http://' + url for url in urls]
+                    urls = [url if url[:7].find(
+                        "http://") != -1 or url[:8].find("https://") != -1 else'http://' + url for url in urls]
+                    urls = [url[:-1] if url[-1:].find('/') != -1 else url for url in urls]
 
                     scrapped_urls.extend(urls)
-                    if actual_deep==0: urls_domains.extend(urls)
 
                     content = self.build_json_string(urls)
                     conn.request("GET", "urls", content, {"Content-Length":len(content)})
@@ -44,7 +45,7 @@ class DistScrappyClient:
 
                         json_body = json.loads(body.decode())
 
-                        levels.update({actual_deep:json_body})
+                        levels[actual_deep] = json_body
 
                         actual_deep+=1
 
@@ -54,10 +55,13 @@ class DistScrappyClient:
                         for u,h in json_body['urls'].items():
 
                             soup = BeautifulSoup(h, "lxml")
-                            links = []
+                            
                             for link in soup.findAll('a'):
                                 lnk = link.get('href')
-                                
+
+                                if lnk is None or  lnk =='/':
+                                    continue
+
                                 if lnk[0]=='/':
                                     lnk=u+lnk
 
