@@ -4,6 +4,9 @@ import http.client as http_c
 import random
 from typing import List,Dict
 from bs4 import BeautifulSoup
+from urllib.request import Request, urlopen
+import re
+
 
 
 class DistScrappyClient:
