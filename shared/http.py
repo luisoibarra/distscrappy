@@ -63,7 +63,7 @@ class HTTPResponse:
         try:
             str_response = self.raw_response.decode()
             lines = str_response.split("\r\n")
-            http, status_code, status_message = lines[0].split(" ")
+            http, status_code, status_message = lines[0].split()
             self.version = http
             self.status_code = int(status_code)
             self.status_message = status_message

@@ -14,7 +14,12 @@ def start(*addresses:("Central nodes addresses")):
 
     command=""
 
-    help_msg = "Availables commands:\n fetch URL1 URL2 URL3 [...] <This command will fetch listed urls>\n exit <This command will terminate client process>\n help <This command will show this help message>\n Example:\n fetch www.wikipedia.org www.instagram.com"
+    help_msg = "Availables commands:\n \
+        fetch < depth_level:int > URL1 URL2 URL3 [...] \
+        <This command will fetch listed urls and scrap to the level asigned>\n \
+            exit <This command will terminate client process>\n \
+                help <This command will show this help message>\n\
+                     Example:\n fetch 0 www.wikipedia.org http://www.instagram.com"
 
     while True:
         command= input()
@@ -23,10 +28,10 @@ def start(*addresses:("Central nodes addresses")):
         elif command.lower() == "help":
             print(help_msg)
         
-        command,*args=command.split(" ")
+        command,*args=command.split()
 
         if command.lower() == "fetch":
-            result = client.start(args)
+            result = client.start(args[1:], int(args[0]))
             print(result)
         else:
             print(help_msg)

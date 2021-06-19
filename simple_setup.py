@@ -2,9 +2,6 @@
 Start a simple Distscrappy network based on config.py
 """
 
-from server.central import CentralNode
-from server.ring import RingNode
-from client.client import DistScrappyClient
 from concurrent.futures import ProcessPoolExecutor
 import concurrent.futures as conc
 import time

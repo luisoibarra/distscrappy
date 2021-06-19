@@ -26,6 +26,9 @@ def get_scrapped_info(html:str, error:str) -> SCRAPPED_INFO:
 # Dictionary mapping each URL to corresponding HTML
 URLHTMLDict: Dict[str, SCRAPPED_INFO] = Dict[str, SCRAPPED_INFO]
 
+# Dictionary mapping each level of depth to corresponding URL_HTML_DICT
+LEVEL_SCRAPING_DICT: Dict[int, URLHTMLDict] = Dict[int, URLHTMLDict]
+
 ServerInfo: Tuple[IP_DIR, IP_DIR, IP_DIR] = Tuple[IP_DIR, IP_DIR, IP_DIR]
 SERV_SERV : int = 0
 SERV_NS : int = 1
