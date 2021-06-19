@@ -18,18 +18,25 @@ def start():
             -(Optional) mark the Show HTML Code before clicking \n
             fetch button to show the html code of the fetched page''')
 
-    urls = st.text_input('url(s) input', value='evea.uh.cu').split(" ")
+
+    urls = st.text_input(
+        'url(s) input', value='www.uh.cu').split(" ")  # www.uci.cu www.cubadebate.cu evea.uh.cu
+
+    depth = st.number_input('depth level number',min_value=0,value=1,max_value=2)
     
     html_code_chckbx = st.checkbox('Show html code', value=False)
 
-    if st.button('fetch'):
+    #if st.button('fetch'):
+    if True:
         log.basicConfig(level=log.INFO)
 
         client = DistScrappyClient([x for x,_,_ in SERVER_NS_ZMQ_ADDRS])
 
-        result = client.start(urls)
+        level_result = client.start(urls,depth)
 
-        urls_html_dict, errors = result.values()
+        level,result_by_level_dict = level_result.values()
+
+        urls_html_dict, errors = result_by_level_dict.values()
 
         for url, html in urls_html_dict.items():
 
