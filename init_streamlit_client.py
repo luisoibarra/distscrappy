@@ -15,12 +15,11 @@ def start():
             -write your urls in the url(s) input zone with a space as separator
              www.wikipedia.org  http://www.instagram.com  \n
             - then click the fetch button to fetch those url\n
-            -(Optional) mark the Show HTML Code before clicking fetch button to show the html code of the fetched page''')
+            -(Optional) mark the Show HTML Code before clicking \n
+            fetch button to show the html code of the fetched page''')
 
     urls = st.text_input('url(s) input', value='evea.uh.cu').split(" ")
     
-    html_code_chckbx = st.checkbox('Show html code', value=False)
-
     html_code_chckbx = st.checkbox('Show html code', value=False)
 
     if st.button('fetch'):
