@@ -18,6 +18,8 @@ def start():
             -(Optional) mark the Show HTML Code before clicking fetch button to show the html code of the fetched page''')
 
     urls = st.text_input('url(s) input', value='evea.uh.cu').split(" ")
+    
+    html_code_chckbx = st.checkbox('Show html code', value=False)
 
     html_code_chckbx = st.checkbox('Show html code', value=False)
 
