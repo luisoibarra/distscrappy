@@ -2,6 +2,7 @@ from functools import reduce
 
 from Pyro4.core import Proxy
 from shared.const import IP_DIR
+from config import CLOCK_SYNC_DELAY_SECONDS
 from typing import Dict, List, Union
 from server.ring import RingNode
 import time
@@ -72,7 +73,7 @@ class TimeSynchronization(LoggerMixin):
                 self.synchronizeAllClocks(client_data)
             except Exception as e:
                 self.log_exception(e)
-            time.sleep(5)
+            time.sleep(CLOCK_SYNC_DELAY_SECONDS)
                     
     def stop(self):
         """
