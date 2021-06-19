@@ -31,7 +31,7 @@ def start(
             new_addresses.append((host,int(port)))
         ns_addresses = new_addresses
     print(ns_addresses)
-    ring = RingNode(host, int(port), ns_addresses=ns_addresses)
+    ring = RingNode(host, int(port), bits=RING_BITS, ns_addresses=ns_addresses)
     ring.start()
     
 if __name__ == "__main__":

@@ -21,8 +21,6 @@ def start():
     
     html_code_chckbx = st.checkbox('Show html code', value=False)
 
-    html_code_chckbx = st.checkbox('Show html code', value=False)
-
     if st.button('fetch'):
         log.basicConfig(level=log.INFO)
 

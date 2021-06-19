@@ -1,4 +1,4 @@
-import Pyro4
+# import Pyro4
 
 # Pyro4.config.COMMTIMEOUT = 10 # Max amount of seconds to wait for a pyro conenction
 
@@ -19,6 +19,9 @@ RING_ADDRS = [
     ("127.0.0.2", 9007),
 
 ]
+
+# Hash bits for DHT. Max amount is 2^RING_BITS
+RING_BITS = 5
 
 # server address to deploy client fetched html
 DEPLOY_SERVER_ADDR = ("127.0.0.3",9000)
