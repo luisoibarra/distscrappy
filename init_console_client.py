@@ -12,13 +12,7 @@ def start():
 
     command=""
 
-    help_msg = '''Availables commands:\n
-             fetch URL1 URL2 URL3 [...]  <This command will fetch listed urls>\n
-             exit <This command will terminate client process>\n
-             help <This command will show this help message>\n
-             \n
-            Example:\n 
-             fetch www.wikipedia.org www.instagram.com'''
+    help_msg = "Availables commands:\n fetch URL1 URL2 URL3 [...] <This command will fetch listed urls>\n exit <This command will terminate client process>\n help <This command will show this help message>\n Example:\n fetch www.wikipedia.org www.instagram.com"
 
     while True:
         command= input()
