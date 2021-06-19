@@ -41,6 +41,7 @@ class Coordinator(LoggerMixin):
 
         self.running = True
         sock_rep = self.context.socket(zmq.REP)
+        
         sock_rep.bind(f"tcp://{self.address[0]}:{self.address[1]}")
         
         election_tasks:List[Future] = []
