@@ -4,7 +4,9 @@ Es un módulo para realizar scrapping simple a URLs.
 
 ## Cliente
 
-Es la parte encargada de consumir el servicio, debido a la arquitectura del sistema requiere que se le pasen las direcciones de los servidores centrales a los cuales puede conectarse para completar sus tareas. La princial tarea que realiza es pedir URLs al sistema, la comunicación entre el cliente y el sistema se realiza mediante HTTP.
+Es la parte encargada de consumir el servicio, debido a la arquitectura del sistema, requiere que se le pasen las direcciones de los servidores centrales a los cuales puede conectarse para completar sus tareas, las direcciones por defecto se encuentran en *config.py*. 
+
+Su princial tarea consiste en pedir URLs al sistema de **DistScrappy**, la comunicación entre el cliente y el sistema se realiza mediante el protocolo HTTP.
 
 ### Formato del cuerpo de Request-Response
 
@@ -67,17 +69,17 @@ Para iniciar los nodos trabajadores se tienen dos scripts:
 
 Estos dos elementos son imprescindibles para el funcionamiento de **DistScrappy**.
 
-El sistema posee la capacidad de tener guardado del contenido de los nodos, para esto es necesario correr el nodo de almacenamiento.
+El sistema posee la capacidad de tener guardado el contenido de los nodos, para esto es necesario correr el nodo de almacenamiento.
 
 Para esto se tiene el script:
 
-- *init_storage.py* Permite la creación de un nodo de almacenamiento.
+- *init_storage.py* Permite la creación del nodo de almacenamiento.
 
 Para una prueba local rápida se puede usar *simple_setup.py* el cual monta el sistema en las direcciones por defecto.
 
 ### Arquitectura
 
-La arquitectura de **DistScrappy** se conforma principalmente de dos partes, un conjunto de servidores centrales con direcciones bien conocidas por los clientes y un conjunto distribuido de nodos desconocidos por los clientes los cuales se encargan de distribuir las tareas pedidas al sistema.
+La arquitectura de **DistScrappy** se conforma principalmente de dos partes, un conjunto de servidores centrales con direcciones bien conocidas por los clientes y un conjunto distribuido de nodos desconocidos por los clientes los cuales se encargan de distribuirse las tareas pedidas al sistema.
 
 ### Comunicación
 
@@ -107,11 +109,11 @@ Cada nodo central posee un name server para replicar la información para así p
 
 Debido a que **DistScrappy** utiliza un sistema basado en el tiempo relativo hace falta mantener a los nodos de acuerdo con el tiempo del sistema, para esto se utiliza el algoritmo de Berkeley.
 
-Otros tipos de sincronización son logrados por mediante el uso de mutex y llamados RPC como es el caso del nodo de almacenamiento *server.storage.StorageNode*.
+Otros tipos de sincronización son logrados mediante el uso de Locks y llamados RPC como es el caso del nodo de almacenamiento *server.storage.StorageNode*.
 
 ##### Coordinación
 
-Entre los nodos centrales se mantiene un coordinador, el cual es el encargado de realizar tareas de mantenimiento en el sistema como la de sincronización de los name servers y del tiempo en los nodos. Este coordinador es seleccionado mediante el algoritmo Bully y se mantiene vigilancia sobre él y en caso de fallos se reelige otro nuevo.
+Entre los nodos centrales se mantiene un coordinador, el cual es el encargado de realizar tareas de mantenimiento en el sistema como la de sincronización de los name servers y del tiempo en los nodos. Este coordinador es seleccionado mediante el algoritmo Bully y se mantiene vigilancia sobre él para en caso de fallar se reeliga uno nuevo.
 
 #### Nodos Trabajadores
 
@@ -126,7 +128,7 @@ Estos nodos se basan en el protocolo Chord para crear un sistema en forma de ani
 
 ##### Descargar
 
-Cada nodo es responsable por descargar las URLs que le corresponde guardar según el hash asignado a este. Así es posible impedir de que más de un nodo esté descargando la misma URL impidiendo que se consuman recursos innecesariamente. En caso de que se pida una URL que está siendo descargada el sistema lo detecta y devuelve el resultado de la descarga en proceso. Para la descarga se utiliza el módulo **urllib**.
+Cada nodo es responsable por descargar las URLs que le corresponde guardar según el hash asignado a este. Así es posible impedir de que más de un nodo esté descargando la misma URL impidiendo que se consuman recursos innecesariamente. En caso de que se pida una URL que está siendo descargada, el sistema lo detecta y devuelve el resultado de la descarga en proceso. Para la descarga se utiliza el módulo **urllib**.
 
 ##### Cachear
 
