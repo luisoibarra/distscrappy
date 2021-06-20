@@ -35,6 +35,25 @@ El response del sistema contiene en su cuerpo un JSON con el siguiente formato:
 }
 ```
 
+### Virtualenv
+#### Creando un entorno virtual
+https://virtualenvwrapper.readthedocs.io/en/latest/
+
+'''console
+foo@bar:-$ $ pip install virtualenvwrapper
+...
+$ export WORKON_HOME=~/Envs
+$ mkdir -p $WORKON_HOME
+$ source /usr/local/bin/virtualenvwrapper.sh
+'''
+#### Instalando los requerimientos
+
+'''console
+foo@bar:-$ mkvirtualenv env1
+...
+$ pip install -r requirements.txt
+'''
+
 ### Uso
 
 Se realizaron tres niveles built-in de consumo:
