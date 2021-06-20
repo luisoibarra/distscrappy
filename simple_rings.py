@@ -19,7 +19,7 @@ def start():
 
     ring_tasks = []
     for i in range(len(RING_ADDRS)):
-        time.sleep(.5)
+        time.sleep(2)
         ring_task = executor.submit(ir.start,i)
         ring_tasks.append(ring_task)
     for t in ring_tasks:

@@ -30,11 +30,14 @@ class CentralNode(LoggerMixin):
         self.receivers_tasks = None
         self.name_server_tasks = None
         self.running = False
+        self.ns_daemon = None
     
     def start(self):
         """
         Start central node
         """
+        self.running = True
+        
         self.name_server_tasks = []
         self.receivers_tasks = []
 
@@ -43,7 +46,9 @@ class CentralNode(LoggerMixin):
 
         rec_task = self.executor.submit(self.receiver_server_loop)
         self.receivers_tasks.append(rec_task)
-
+        
+        cli_task = self.executor.submit(self.cli_loop)
+        
         time.sleep(1)
 
         for ns_task in self.name_server_tasks:
@@ -58,7 +63,6 @@ class CentralNode(LoggerMixin):
         
         sync_ns_task = None
         
-        self.running = True
         while self.running:
             time.sleep(1)
             if self.coordinator.is_coordinator: # Coordinator checks
@@ -83,15 +87,18 @@ class CentralNode(LoggerMixin):
         """
         Stops the node
         """
+        self.running = False
         self.log_info("Stopping Central Node")
+        self.log_debug("Stopping name server")
+        if self.ns_daemon:
+            self.ns_daemon.shutdown()
         self.log_debug("Cancelling tasks")
         for task in self.name_server_tasks + self.receivers_tasks:
             task.cancel()
-        self.log_debug("Shutting down executor")
-        self.executor.shutdown()
         self.log_debug("Executor is shutdown")
         self.coordinator.stop()
-        self.running = False
+        self.log_debug("Shutting down executor")
+        self.executor.shutdown()
 
 
     def _task_finish_callback(self, task_name:str):
@@ -120,15 +127,56 @@ class CentralNode(LoggerMixin):
         """
         Init the name server.
         """
-        init_name_server(self.ns_address[0], self.ns_address[1])
-    
+        while self.running:
+            try:
+                self.log_info(f"Name server started at {self.ns_address}")
+                self.ns_daemon = init_name_server(self.ns_address[0], self.ns_address[1], True)
+                self.ns_daemon.requestLoop()
+            except Exception as exc:
+                if self.ns_daemon:
+                    self.ns_daemon.shutdown()
+                restart = 5
+                self.log_error(f"Name server stopped, restarting in {restart} seconds")
+                self.log_exception(exc)
+                time.sleep(restart)
+                
     def receiver_server_loop(self):
         """
         Init http receiver server. 
         """
         receiver = HTTPRequestReceiver(self.client_interface_address)
-        receiver.start(self)
-        
+        while self.running:
+            try:
+                self.log_info(f"Receiver started at {self.client_interface_address}")
+                receiver.start(self)
+            except Exception as exc:
+                self.log_error(f"Receiver stopped, restarting in {restart} seconds")
+                receiver.stop()
+                restart = 5
+                self.log_exception(exc)
+                time.sleep(restart)
+
+    def cli_loop(self):
+        """
+        Command line interface.
+        """
+        help_msg = "Commands:\n\nhelp: prints this message\nstop: Stop current node\n"
+        pre_msg = f"Central {self.server_addresses}\n"
+        while self.running:
+            command = input()
+            if not command:
+                print(help_msg)
+                continue
+            command, *args = command.split()
+            if command == "help":
+                print(help_msg)
+            if command == "stop":
+                self.stop()
+                break
+            else:
+                print(f"Unrecognized command {command}")
+                print(help_msg)
+
     def get_ring_nodes_availables(self):
         """
         Return a dictionary mapping ring nodes names to its pyro address

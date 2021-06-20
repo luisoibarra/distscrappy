@@ -5,10 +5,12 @@ from client.client import DistScrappyClient
 import logging as log
 from config import *
 
-def start():
+def start(*addresses:("Central nodes addresses")):
     log.basicConfig(level=log.INFO)
 
-    client = DistScrappyClient([x for x, _, _ in SERVER_NS_ZMQ_ADDRS])
+    curr_addresses = [(host ,int(port)) for host, port in [x.split(":") for x in addresses]]
+
+    client = DistScrappyClient(curr_addresses if curr_addresses else [x for x, _, _ in SERVER_NS_ZMQ_ADDRS])
 
     command=""
 
@@ -21,6 +23,9 @@ def start():
 
     while True:
         command= input()
+        if not command:
+            print(help_msg)
+            continue
         if command.lower() == "exit":
             break
         elif command.lower() == "help":
@@ -38,4 +43,5 @@ def start():
             
 
 if __name__ == "__main__":
-    start()
+    import plac
+    plac.call(start)

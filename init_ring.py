@@ -15,7 +15,7 @@ from config import *
 def start(
     index:('index','option','i',int) = 0,
     address:('address','option','addr',str) = None,
-    *ns_addresses:('name server addresses','option',str)
+    *ns_addresses:('name server addresses')
     ):
     log.basicConfig(level=log.INFO)
     if address is None:
