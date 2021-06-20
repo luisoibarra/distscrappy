@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor,wait,ALL_COMPLETED
 from shared.clock import ClockMixin
 from chord.ch_node import ChordNode, sum_id
 from chord.ch_shared import create_object_proxy, locate_ns, method_logger
@@ -55,21 +56,33 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         url_html_dict = {}
         
-        for url in urls: # TODO Maybe some threads can be created here
-            state = self.fetch_url_state(url)
-            if state is not None and self.is_cache_valid(state): # Exist entry in DHT
-                self.log_info(f"Cache Hit for {url}")
-                url_html_dict[url] = get_scrapped_info(state[ST_HTML], None)
-            else:
-                self.log_info(f"Downloading {url}")
-                try:
-                    fetched_state = self.fetch_url(url, True)
-                    self.insert_state(fetched_state)
-                    url_html_dict[url] = get_scrapped_info(fetched_state[ST_HTML], None)
-                except Exception as exc:
-                    url_html_dict[url] = get_scrapped_info(None, exc.args[0])
+        # for url in urls: # TODO Maybe some threads can be created here
+        
+        with ThreadPoolExecutor() as executor:
+            # Start the load operations and mark each future with its URL
+            fetch_tasks = [executor.submit(self.process_get_url, url, url_html_dict) for url in urls]
+            wait(fetch_tasks ,return_when = ALL_COMPLETED)
+            return url_html_dict
 
         return url_html_dict
+
+    def process_get_url(self,url:str,url_html_dict:URLHTMLDict):
+        
+        state = self.fetch_url_state(url)
+
+        # Exist entry in DHT
+        if state is not None and self.is_cache_valid(state):
+            self.log_info(f"Cache Hit for {url}")
+            url_html_dict[url] = get_scrapped_info(state[ST_HTML], None)
+        else:
+            self.log_info(f"Downloading {url}")
+            try:
+                fetched_state = self.fetch_url(url, True)
+                self.insert_state(fetched_state)
+                url_html_dict[url] = get_scrapped_info(
+                    fetched_state[ST_HTML], None)
+            except Exception as exc:
+                url_html_dict[url] = get_scrapped_info(None, exc.args[0])
     
     def create_other_tasks(self):
         super().create_other_tasks()
