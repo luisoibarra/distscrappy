@@ -34,6 +34,40 @@ El response del sistema contiene en su cuerpo un JSON con el siguiente formato:
     }
 }
 ```
+## Quick Test
+
+### Virtualenv
+#### Creando un entorno virtual
+https://virtualenvwrapper.readthedocs.io/en/latest/
+
+```console
+foo@bar:-$ $ pip install virtualenvwrapper
+...
+$ export WORKON_HOME=~/Envs
+$ mkdir -p $WORKON_HOME
+$ source /usr/local/bin/virtualenvwrapper.sh
+```
+#### Instalando los requerimientos
+
+```console
+foo@bar:-$ mkvirtualenv env1
+...
+(env1)foo@bar:-$ pip install -r requirements.txt
+```
+
+### Uso rápido de DistScrappy
+Abra un terminal y escriba:
+```console
+foo@bar:-$ workon env1
+...
+(env1)foo@bar:-$ python simple_setup.py
+```
+Abra otro terminal y escriba:
+```console
+foo@bar:-$ workon env1
+...
+(env1)foo@bar:-$ streamlit run init_streamlit_client.py
+```
 
 ### Uso
 
@@ -41,7 +75,13 @@ Se realizaron tres niveles built-in de consumo:
 
 - Clase: *client.client.DistScrappyClient*, para su uso por otros programas al intanciar la clase.
 - Consola: *init_console_client.py*, crea una consola en la cual se puede interactuar con el sistema de forma directa. Para ejecutarlo correr el script según la ayuda brindada por este
+```console
+foo@bar:-$ python init_console_client.py
+```
 - Streamlit: *init_streamlit_client*, para poder ver directamente los resultados. Para ejecutarlo correr `streamlit run init_streamlit_client` en una consola.
+```console
+foo@bar:-$ python init_streamlit_client.py
+```
 
 Al usar HTTP es muy fácil consumir el servicio brindado por **DistScrappy** sin el uso explícito de la API brindada, realizando un HTTP request con el formato especificado a la dirección de los servidores.
 
