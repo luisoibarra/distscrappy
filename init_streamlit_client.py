@@ -1,7 +1,7 @@
 import streamlit as st
-"""
-Start a  Streamlit DistScrappyClient connected to specified server in config.py
-"""
+
+#Start a  Streamlit DistScrappyClient connected to specified server in config.py
+
 from client.client import DistScrappyClient
 import logging as log
 from config import *
@@ -10,21 +10,30 @@ import os.path
 
 
 def start():
+    st.title("DistScrappy")
     st.info('''Availables commands:\n
              URL1 URL2 URL3 [...] \n
             Example:\n 
             -write your urls in the url(s) input zone with a space as separator
              www.wikipedia.org  http://www.instagram.com  \n
-            - then click the fetch button to fetch those url\n
-            -(Optional) mark the Show HTML Code before clicking \n
-            fetch button to show the html code of the fetched page''')
+            -select the depth level to scrape for \n
+            -then click the fetch button to fetch those url\n
+            Before clicking fetch button you can check this options:\n
+            -(Optional) mark the Show HTML to show the html code of the fetched page(s)\n
+            -(Optional) mark the Save HTML to save the html code of the fetched page(s)\n
+            ''')
+
+
+    st.info('''We strongly recommend to use free sites such as :\n
+    evea.uh.cu www.uci.cu \n ''')
 
 
 
     urls = st.text_input(
         'url(s) input', value='evea.uh.cu').split()  # www.uci.cu www.cubadebate.cu evea.uh.cu
 
-    depth = st.slider('depth level number',min_value = 0,max_value = 3, value = 1,step = 1)
+    depth = st.sidebar.slider('Depth Level',
+                              min_value=0, max_value=3, value=1, step=1)
 
     st.info('Time to scrape depends of depth level ,\
          the amount (and complexity) of the urls sites, and the network speed')
@@ -32,13 +41,13 @@ def start():
     
 
     
-    html_code_chckbx = st.checkbox('Show html code', value=False)
+    html_code_chckbx = st.sidebar.checkbox('Show html code', value=False)
 
-    html_save_chckbx = st.checkbox('Save html code', value=False)
+    html_save_chckbx = st.sidebar.checkbox('Save html code', value=False)
 
-
-    if st.button('fetch'):
-        st.warning("This action could take several minutes depending of depth level")
+    if st.sidebar.button('fetch'):
+        st.warning(
+            "This action could take several minutes depending of depth level")
         i = 0
         progress_bar = st.progress(i)
         frame_text=st.empty()
@@ -62,7 +71,9 @@ def start():
 
                 i+= 1.0
                 progress_bar.progress(i/total)
-                frame_text.text(f"Frame {i}/{total}")
+                frame_text.text(f"url(s) {i}/{total}")
+
+                st.write(int(i),'-',url, "👇")
 
                 # Render the result, contained in a frame of size 200x200.
                 components.html(html, width=800, height=600, scrolling=True)

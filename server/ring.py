@@ -58,11 +58,9 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         
         # for url in urls: # TODO Maybe some threads can be created here
         
-        with ThreadPoolExecutor() as executor:
-            # Start the load operations and mark each future with its URL
-            fetch_tasks = [executor.submit(self.process_get_url, url, url_html_dict) for url in urls]
-            wait(fetch_tasks ,return_when = ALL_COMPLETED)
-            return url_html_dict
+        # Start the load operations and mark each future with its URL
+        fetch_tasks = [self.executor.submit(self.process_get_url, url, url_html_dict) for url in urls]
+        wait(fetch_tasks ,return_when = ALL_COMPLETED)
 
         return url_html_dict
 
@@ -187,7 +185,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             except Exception as ex:
                 exc = ex
                 attempt -= 1
-                time.sleep(10)
+                time.sleep(1)
         raise exc
     
     def leave(self):
