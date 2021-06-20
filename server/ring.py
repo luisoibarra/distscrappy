@@ -12,6 +12,7 @@ from shared.error import ScrapperError
 from Pyro4 import URI
 import Pyro4 as pyro
 import time
+from threading import Barrier
 import hashlib
 
 @pyro.expose
@@ -59,7 +60,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         # for url in urls: # TODO Maybe some threads can be created here
         
         # Start the load operations and mark each future with its URL
-        
+        sem = Barrier(len(urls)+1)
         def callback(task: Future):
             """
             Callback for finish download task. Adds result to dictionary
@@ -70,12 +71,23 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
                 url_html_dict[result[0]] = result[1]
             except Exception as e:
                 self.log_error(f"Downloading error at {self.id}: {e}")
+            finally:
+                sem.wait()
             
         fetch_tasks = [self.executor.submit(self.process_get_url, url) for url in urls]
         for task in fetch_tasks:
             task.add_done_callback(callback)
         
         wait(fetch_tasks ,return_when = ALL_COMPLETED)
+        try:
+            sem.wait()
+        except BrokenPipeError:
+            pass
+        
+        for url in urls:
+            if not url in url_html_dict:
+                url_html_dict[url] = get_scrapped_info(None, "Problem scrapping url")
+        
         return url_html_dict
 
     def process_get_url(self, url:str)-> Tuple[str,SCRAPPED_INFO]:
@@ -149,6 +161,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             storage = self.get_storage_node()
             storage.save_entries(self.values)
             self.log_info(f"Node entries saved")
+            self.writes_amount = 0 # Reset write
         except Exception as exc:
             self.log_exception(exc)
     
@@ -184,6 +197,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
                 break
             except Exception as exc:
                 self.log_error(str(exc))
+            time.sleep(40)
     
     def get_storage_node(self)-> StorageNode:
         """
@@ -229,7 +243,8 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         # TODO Something more fancy?
         fetch_time = state[ST_FETCH_TIME]
-        if fetch_time != None and abs(self.get_ds_time() - fetch_time) < CACHE_THRESHOLD_SECONDS:
+        diff = abs(self.get_ds_time() - fetch_time)
+        if fetch_time != None and diff < CACHE_THRESHOLD_SECONDS:
             return True
         return False
         

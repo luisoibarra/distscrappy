@@ -86,7 +86,7 @@ class ReceiverHandler(http_s.BaseHTTPRequestHandler):
                 content = self._get_content(htmls)
             except Exception as exc:
                 self._set_headers(500) # Server Error Code
-                content = self._get_content(exc.args[0])                
+                content = self._get_content(str(exc))                
 
         self.wfile.write(content)
 

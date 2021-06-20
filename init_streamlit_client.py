@@ -82,9 +82,13 @@ def start():
                     st.write(html)
 
                 if html_save_chckbx:
+                    base_path = "html"
+                    if not os.path.isdir(base_path):
+                        os.mkdir(base_path)
                     path = url[7:] if url[:7]=="http://" else url[8:]
                     path = "".join([char if not char in ['/',':','?','='] else "_" for char in path])
                     path=path+'.html'
+                    path = os.path.join(base_path, path)
                     if os.path.exists(path):
                         with open(path,'w', encoding='UTF-8') as f:
                             f.write(html)
