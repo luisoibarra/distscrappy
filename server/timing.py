@@ -8,7 +8,7 @@ from server.ring import RingNode
 import time
 from shared.logger import LoggerMixin
 import Pyro4 as pyro
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor,wait,ALL_COMPLETED
 from chord.ch_shared import create_object_proxy, create_proxy, locate_ns
 
 
@@ -61,15 +61,9 @@ class TimeSynchronization(LoggerMixin):
                         self.log_info(f"Error creating proxy for {client_name}")
                         continue
                     tasks.append(executor.submit(self.startRecieveingClockTime, node,client_data))
-
-                #Al parecer como manda cada cliente en un hilo a q mande su ClockTime termina el for rapidisimo
-                #  y cuando va a sincronizarlos todos hay algunos que no han terminado
                 
-                #Simulation of a Barrier TODO se puede poner un Barrier del modulo threading
-                cond = True                                     # 
-                while cond:                                     # Creo que esto ya se arregla con el cambio de la client data a local
-                    results = [task.done() for task in tasks]   #                    
-                    cond = not all(results)                     #    
+                wait(tasks,return_when=ALL_COMPLETED)  
+
                 self.synchronizeAllClocks(client_data)
             except Exception as e:
                 self.log_exception(e)

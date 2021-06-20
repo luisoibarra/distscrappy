@@ -58,26 +58,25 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         
         # for url in urls: # TODO Maybe some threads can be created here
         
-        with ThreadPoolExecutor() as executor:
-            # Start the load operations and mark each future with its URL
+        # Start the load operations and mark each future with its URL
+        
+        def callback(task: Future):
+            """
+            Callback for finish download task. Adds result to dictionary
+            """
+            try:
+                result = task.result()
+                self.log_info(f"Downloaded at {self.id}: {result[0]}")
+                url_html_dict[result[0]] = result[1]
+            except Exception as e:
+                self.log_error(f"Downloading error at {self.id}: {e}")
             
-            def callback(task: Future):
-                """
-                Callback for finish download task. Adds result to dictionary
-                """
-                try:
-                    result = task.result()
-                    self.log_info(f"Downloaded at {self.id}: {result[0]}")
-                    url_html_dict[result[0]] = result[1]
-                except Exception as e:
-                    self.log_error(f"Downloading error at {self.id}: {e}")
-                
-            fetch_tasks = [executor.submit(self.process_get_url, url) for url in urls]
-            for task in fetch_tasks:
-                task.add_done_callback(callback)
-            
-            wait(fetch_tasks ,return_when = ALL_COMPLETED)
-            return url_html_dict
+        fetch_tasks = [self.executor.submit(self.process_get_url, url) for url in urls]
+        for task in fetch_tasks:
+            task.add_done_callback(callback)
+        
+        wait(fetch_tasks ,return_when = ALL_COMPLETED)
+        return url_html_dict
 
     def process_get_url(self, url:str)-> Tuple[str,SCRAPPED_INFO]:
         
@@ -199,7 +198,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             except Exception as ex:
                 exc = ex
                 attempt -= 1
-                time.sleep(10)
+                time.sleep(1)
         raise exc
     
     def leave(self):
