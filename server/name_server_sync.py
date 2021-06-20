@@ -3,8 +3,8 @@ from os import times
 from typing import Dict, List, Tuple
 from shared.logger import LoggerMixin
 from shared.const import *
-from concurrent.futures import ThreadPoolExecutor, Future
-import concurrent.futures as futures
+from concurrent.futures import ThreadPoolExecutor, Future, as_completed
+from shared.utils import wait
 import random
 import time
 import Pyro4 as pyro
@@ -33,31 +33,33 @@ class NSSync(LoggerMixin):
             addresses = {}
             addresses_per_ns = {}
             
-            def ns_callback(future:Future):
-                """
-                Callback to update addresses
-                """
+            for ns_addr in self.name_servers: # Fetch all name server data
+                tasks.append(executor.submit(self.get_ns_items, ns_addr))
+            
+            # futures.wait(tasks, return_when=futures.ALL_COMPLETED) # WAIT DOESN'T WORK, NO FUNCIONA
+            # wait(tasks)
+            for task in as_completed(tasks):
                 try:
-                    result = ns_addr, ns_addresses = future.result()
+                    result = ns_addr, ns_addresses = task.result()
                     if result:
                         addresses.update(ns_addresses)
                         addresses_per_ns[ns_addr] = ns_addresses
                 except Exception as exc:
                     self.log_exception(exc)
-            
-            for ns_addr in self.name_servers: # Fetch all name server data
-                tasks.append(executor.submit(self.get_ns_items, ns_addr))
-                tasks[-1].add_done_callback(ns_callback)
-            
-            futures.wait(tasks, return_when=futures.ALL_COMPLETED)
                 
             tasks.clear()
             
             for ns_addr in self.name_servers: # Update name server data
                 tasks.append(executor.submit(self.update_ns, ns_addr, addresses_per_ns.get(ns_addr,{}), addresses))
 
-            futures.wait(tasks, return_when=futures.ALL_COMPLETED)
-
+            # futures.wait(tasks, return_when=futures.ALL_COMPLETED) # WAIT DOESN'T WORK, NO FUNCIONA
+            # wait(tasks)
+            for task in as_completed(tasks):
+                if task.exception():
+                    self.log_debug(f"Name server task finished with an error. {task.exception()}")
+                else:
+                    self.log_debug("Name server task finished.")
+                
             tasks.clear()
             
             for ns_addr in addresses_per_ns:

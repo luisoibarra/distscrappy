@@ -8,7 +8,8 @@ from server.ring import RingNode
 import time
 from shared.logger import LoggerMixin
 import Pyro4 as pyro
-from concurrent.futures import ThreadPoolExecutor,wait,ALL_COMPLETED
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from shared.utils import wait
 from chord.ch_shared import create_object_proxy, create_proxy, locate_ns
 
 
@@ -62,7 +63,10 @@ class TimeSynchronization(LoggerMixin):
                         continue
                     tasks.append(executor.submit(self.startRecieveingClockTime, node,client_data))
                 
-                wait(tasks,return_when=ALL_COMPLETED)  
+                # wait(tasks,return_when=ALL_COMPLETED)  # WAIT DOESN'T WORK, NO FUNCIONA
+                # wait(tasks)
+                for task in as_completed(tasks):
+                    self.log_debug("Timing task completed")
 
                 self.synchronizeAllClocks(client_data)
             except Exception as e:

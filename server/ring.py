@@ -1,5 +1,6 @@
-from concurrent.futures import ThreadPoolExecutor, Future, wait, ALL_COMPLETED
+from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from shared.clock import ClockMixin
+from shared.utils import wait
 from chord.ch_node import ChordNode, sum_id
 from chord.ch_shared import create_object_proxy, locate_ns, method_logger
 from typing import List,Dict,Tuple, Union
@@ -60,34 +61,21 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         # for url in urls: # TODO Maybe some threads can be created here
         
         # Start the load operations and mark each future with its URL
-        sem = Barrier(len(urls)+1)
-        def callback(task: Future):
-            """
-            Callback for finish download task. Adds result to dictionary
-            """
+        fetch_tasks = [self.executor.submit(self.process_get_url, url) for url in urls]
+
+        for task in as_completed(fetch_tasks):
+            self.log_info("Download Task done")
             try:
                 result = task.result()
                 self.log_info(f"Downloaded at {self.id}: {result[0]}")
                 url_html_dict[result[0]] = result[1]
             except Exception as e:
                 self.log_error(f"Downloading error at {self.id}: {e}")
-            finally:
-                sem.wait()
-            
-        fetch_tasks = [self.executor.submit(self.process_get_url, url) for url in urls]
-        for task in fetch_tasks:
-            task.add_done_callback(callback)
-        
-        wait(fetch_tasks ,return_when = ALL_COMPLETED)
-        try:
-            sem.wait()
-        except BrokenPipeError:
-            pass
         
         for url in urls:
             if not url in url_html_dict:
                 url_html_dict[url] = get_scrapped_info(None, "Problem scrapping url")
-        
+            
         return url_html_dict
 
     def process_get_url(self, url:str)-> Tuple[str,SCRAPPED_INFO]:
