@@ -6,7 +6,7 @@ from Pyro4.naming_storage import SqlStorage
 import os.path as path
 import os
 
-def init_name_server(ns_host:str=None, ns_port:int=0):
+def init_name_server(ns_host:str=None, ns_port:int=0, return_daemon=False):
     try:
         os.mkdir("data")
     except FileExistsError:
@@ -16,6 +16,8 @@ def init_name_server(ns_host:str=None, ns_port:int=0):
         fd = open(filename, 'x')
         fd.close()
     daemon = NameServerDaemon(ns_host, ns_port,storage=f"sql:{filename}")
+    if return_daemon:
+        return daemon
     daemon.requestLoop()
 
 def main(ns_host:("Pyro name server host","option","nsh",str)=None,

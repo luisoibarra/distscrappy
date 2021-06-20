@@ -1,9 +1,10 @@
 from chord.ch_shared import locate_ns
 from os import times
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from shared.logger import LoggerMixin
 from shared.const import *
 from concurrent.futures import ThreadPoolExecutor, Future
+import concurrent.futures as futures
 import random
 import time
 import Pyro4 as pyro
@@ -37,26 +38,26 @@ class NSSync(LoggerMixin):
                 Callback to update addresses
                 """
                 try:
-                    ns_addresses = future.result()
-                    if ns_addresses:
+                    result = ns_addr, ns_addresses = future.result()
+                    if result:
                         addresses.update(ns_addresses)
                         addresses_per_ns[ns_addr] = ns_addresses
-                except Exception:
-                    pass
+                except Exception as exc:
+                    self.log_exception(exc)
             
             for ns_addr in self.name_servers: # Fetch all name server data
                 tasks.append(executor.submit(self.get_ns_items, ns_addr))
                 tasks[-1].add_done_callback(ns_callback)
             
-            while not all(task.done() for task in tasks): # Barrier
-                time.sleep(.5)
+            futures.wait(tasks, return_when=futures.ALL_COMPLETED)
+                
             tasks.clear()
             
             for ns_addr in self.name_servers: # Update name server data
                 tasks.append(executor.submit(self.update_ns, ns_addr, addresses_per_ns.get(ns_addr,{}), addresses))
 
-            while not all(task.done() for task in tasks): # Barrier
-                time.sleep(.5)
+            futures.wait(tasks, return_when=futures.ALL_COMPLETED)
+
             tasks.clear()
             
             for ns_addr in addresses_per_ns:
@@ -66,22 +67,22 @@ class NSSync(LoggerMixin):
 
         executor.shutdown()
     
-    def get_ns_items(self, ns_addr:IP_DIR)-> Dict[str,str]:
+    def get_ns_items(self, ns_addr:IP_DIR)-> Tuple[IP_DIR,Dict[str,str]]:
         """
         Returns the items from given name server
         """
         host, port = ns_addr
         self.log_debug(f"Fetching data from ns {host}:{port}")
         try:
-            with locate_ns([(host, port)], 2, 2) as ns:
+            with locate_ns([(host, port)]) as ns:
                 ns_addresses = ns.list()
             pyro_ns_name = "Pyro.NameServer"
             if pyro_ns_name in ns_addresses:
                 ns_addresses.__delitem__(pyro_ns_name)
-            return ns_addresses
+            return ns_addr, ns_addresses
         except PyroError as e:
-            self.log_info(f"Name server {host}:{port} {e.args[0]}")    
-            return None
+            self.log_info(f"Name server {host}:{port} {e}")    
+            return None, None
     
     def update_ns(self, ns_addr: IP_DIR, ns_items: Dict[str,str], addresses: Dict[str,str]):
         """
@@ -90,7 +91,7 @@ class NSSync(LoggerMixin):
         host, port = ns_addr
         self.log_debug(f"Updating data to ns {host}:{port}")
         try:
-            with locate_ns([(host, port)], 2, 2) as ns:
+            with locate_ns([(host, port)]) as ns:
                 for name,uri in addresses.items():
                     # Check if ns has the key
                     ns_saved_uri = ns_items.get(name, None) 
@@ -98,7 +99,7 @@ class NSSync(LoggerMixin):
                         ns.register(name,uri)
                     # TODO Check for posibles repeated names with different URIs
         except PyroError as e:
-            self.log_info(f"Name server {host}:{port} {e.args[0]}")
+            self.log_info(f"Name server {host}:{port} {e}")
     
     def stop(self):
         """

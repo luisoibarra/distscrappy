@@ -303,7 +303,7 @@ class ChordNode:
                                 node_registered = True
                                 break
                             import string
-                            random_string = "".join(random.choices(string.ascii_uppercase) for _ in range(20))
+                            random_string = "".join(random.choices(string.ascii_uppercase)[0] for _ in range(20))
                             id = self.hash(random_string)
                             name = type(self).node_name(id)
                             try_amount -= 1 
@@ -448,7 +448,8 @@ class ChordNode:
             try:
                 self.stabilize()
             except TypeError as exc:
-                log.error(str(exc))
+                # log.error(str(exc))
+                pass
             except Exception as exc:
                 log.exception(exc)
             time.sleep(interval_milliseconds/1000)
