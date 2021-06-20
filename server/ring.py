@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, Future, wait, ALL_COMPLETED
 from shared.clock import ClockMixin
 from chord.ch_node import ChordNode, sum_id
 from chord.ch_shared import create_object_proxy, locate_ns, method_logger
@@ -53,23 +54,47 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         Get a given urls list
         """
-        url_html_dict = {}
+        url_html_dict: URLHTMLDict = {}
         
-        for url in urls: # TODO Maybe some threads can be created here
-            state = self.fetch_url_state(url)
-            if state is not None and self.is_cache_valid(state): # Exist entry in DHT
-                self.log_info(f"Cache Hit for {url}")
-                url_html_dict[url] = get_scrapped_info(state[ST_HTML], None)
-            else:
-                self.log_info(f"Downloading {url}")
+        # for url in urls: # TODO Maybe some threads can be created here
+        
+        with ThreadPoolExecutor() as executor:
+            # Start the load operations and mark each future with its URL
+            
+            def callback(task: Future):
+                """
+                Callback for finish download task. Adds result to dictionary
+                """
                 try:
-                    fetched_state = self.fetch_url(url, True)
-                    self.insert_state(fetched_state)
-                    url_html_dict[url] = get_scrapped_info(fetched_state[ST_HTML], None)
-                except Exception as exc:
-                    url_html_dict[url] = get_scrapped_info(None, exc.args[0])
+                    result = task.result()
+                    self.log_info(f"Downloaded at {self.id}: {result[0]}")
+                    url_html_dict[result[0]] = result[1]
+                except Exception as e:
+                    self.log_error(f"Downloading error at {self.id}: {e}")
+                
+            fetch_tasks = [executor.submit(self.process_get_url, url) for url in urls]
+            for task in fetch_tasks:
+                task.add_done_callback(callback)
+            
+            wait(fetch_tasks ,return_when = ALL_COMPLETED)
+            return url_html_dict
 
-        return url_html_dict
+    def process_get_url(self, url:str)-> Tuple[str,SCRAPPED_INFO]:
+        
+        state = self.fetch_url_state(url)
+        self.log_debug(f"URL State DHT: {str(state)[:200]}")
+        # Exist entry in DHT
+        if state is not None and self.is_cache_valid(state):
+            self.log_info(f"Cache Hit for {url}")
+            return url, get_scrapped_info(state[ST_HTML], None)
+        else:
+            self.log_info(f"Downloading {url}")
+            try:
+                fetched_state = self.fetch_url(url, True)
+                self.insert_state(fetched_state)
+                return url, get_scrapped_info(fetched_state[ST_HTML], None)
+            except Exception as exc:
+                return url, get_scrapped_info(None, str(exc))
     
     def create_other_tasks(self):
         super().create_other_tasks()
@@ -205,7 +230,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         # TODO Something more fancy?
         fetch_time = state[ST_FETCH_TIME]
-        if fetch_time != None and abs(self.get_ds_time() - fetch_time) < CACHE_THRESHOLD_SECONDS: # One minute cache threshold. Only temporary
+        if fetch_time != None and abs(self.get_ds_time() - fetch_time) < CACHE_THRESHOLD_SECONDS:
             return True
         return False
         

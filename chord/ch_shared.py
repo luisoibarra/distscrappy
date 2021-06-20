@@ -58,7 +58,7 @@ def remove_name_from_ns(name:str, ns_addresses: list, current_value=None):
     while ns_addresses:
         addr = ns_addresses.pop()
         try:
-            with locate_ns([addr], 2, 1) as ns:
+            with locate_ns([addr]) as ns:
                 if current_value:
                     value = ns.lookup(name)
                     if value != current_value:
@@ -82,7 +82,7 @@ def locate_ns(ns_addresses: list, amounts:int=NS_TRY_AMOUNT, retry_time:int=NS_T
                 exceptions.append(exc)
         try:
             raise exceptions[0]
-        except pyro.errors.PyroError:
+        except pyro.errors.PyroError as exc:
             log.info(
                 f"Can't locate the name servers {ns_addresses}. Retrying in {retry_time} seconds...")
             time.sleep(retry_time)

@@ -8,8 +8,8 @@ import logging as log
 from config import *
 
 def start(
-    address:('address','option','addr',str) = None,
-    *ns_addresses:('name server addresses','option',str)
+    address: ('address','option','addr',str) = None,
+    *ns_addresses:('name server addresses')
     ):
     log.basicConfig(level=log.DEBUG)
     if address is None:

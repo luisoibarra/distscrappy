@@ -23,6 +23,9 @@ def start(*addresses:("Central nodes addresses")):
 
     while True:
         command= input()
+        if not command:
+            print(help_msg)
+            continue
         if command.lower() == "exit":
             break
         elif command.lower() == "help":

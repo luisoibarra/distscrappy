@@ -59,7 +59,7 @@ class DistScrappyClient:
                             for link in soup.findAll('a'):
                                 lnk = link.get('href')
 
-                                if lnk is None or  lnk =='/':
+                                if not lnk or lnk =='/':
                                     continue
 
                                 if lnk[0]=='/':

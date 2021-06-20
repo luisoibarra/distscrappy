@@ -51,7 +51,7 @@ class URLFetcher(LoggerMixin):
                 task.add_done_callback(finish_downloading_callback)
                 return get_scrapped_info(task.result(), None)
         except Exception as ex:
-            exc = str(ex.args[0])
+            exc = str(ex)
             self.log_exception(ex)
             return get_scrapped_info(None, exc)
 
