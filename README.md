@@ -50,6 +50,20 @@ foo@bar:-$ workon env1
 
 > Este comando abrirá una página web en donde podrá interactuar con el sistema montado previamente.
 
+#### Notas a tener en cuenta
+
+Utilizamos páginas de sitios nacionales gratuitas, las cuales recomendamos usar para el ahorro de datos.
+
+Las páginas <www.uh.cu> y <www.uci.cu> son páginas bastante vistosas para las pruebas de scrapeo en profundidad las cuales tendran un efecto bastante placentero en el usuario.
+
+Si además marca el checkbox "Show html preview" tendrá un resultado aún más impresionante a la vista.
+
+Tendrá una barra de progreso indicando la cantidad de sitios obtenidos mediante el scrapeo y de estos cuales fueron descargados exitosamente.
+
+El caching mejora nuestro programa ,reduciendo el tiempo de descarga en una décima parte aproximadamente.
+
+También contamos con un sección de tiempo para visualizar mejor el efecto del mismo
+
 ## Sistema General
 
 ### Arquitectura
