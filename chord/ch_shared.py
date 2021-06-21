@@ -77,15 +77,15 @@ def locate_ns(ns_addresses: list, amounts:int=NS_TRY_AMOUNT, retry_time:int=NS_T
         tasks=[]
            
         with ThreadPoolExecutor() as executor:
-            try:
-                tasks = [executor.submit(pyro.locateNS, ns_host, ns_port)for ns_host, ns_port in ns_addresses]
-                for task in as_completed(tasks):
+            tasks = [executor.submit(pyro.locateNS, ns_host, ns_port)for ns_host, ns_port in ns_addresses]
+            for task in as_completed(tasks):
+                try:
                     ns=task.result()
                     if not ns is None:
                         ns.ping() # Check if it is alive
                         return ns
-            except Exception as exc:
-                exceptions.append(exc)
+                except Exception as exc:
+                    exceptions.append(exc)
         try:
             raise exceptions[0]
         except pyro.errors.PyroError as exc:
