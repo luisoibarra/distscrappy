@@ -31,6 +31,9 @@ class DistScrappyClient:
                 if exec is None:
                     conn=task.result()  # Check if it is alive
                     break
+                errors.append(exec.args[0])
+            else:#for/else se ejecuta si el ciclo termina normalmente
+                raise ConnectionError("\n".join(errors))
             try:
 
                 actual_deep = 0
@@ -108,7 +111,8 @@ class DistScrappyClient:
 def check_server(host,port):
     conn=http_c.HTTPConnection(host,port)
     try:
-        conn.close()
+        conn.request("GET", "", b"", {"Content-Length": len(b"")})
+        resp= conn.getresponse()
         return http_c.HTTPConnection(host, port)
     except Exception as e:
         raise e
