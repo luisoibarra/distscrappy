@@ -108,12 +108,13 @@ class DistScrappyClient:
             raise exc
                 
 
-def check_server(host,port):
+def check_server(host: str, port: int):
+    """
+    Check if the connection can be stablished returning it if it was posible.
+    """
     conn=http_c.HTTPConnection(host,port)
-    try:
-        conn.request("GET", "", b"", {"Content-Length": len(b"")})
-        resp= conn.getresponse()
-        return http_c.HTTPConnection(host, port)
-    except Exception as e:
-        raise e
+    conn.request("GET", "", b"", {"Content-Length": len(b"")})
+    resp = conn.getresponse()
+    return conn
+
 # fetch http://www.cubaeduca.cu http://www.etecsa.cu http://www.uci.cu http://evea.uh.cu http://www.uo.edu.cu http://www.uclv.edu.cu http://covid19cubadata.uh.cu http://www.uh.cu

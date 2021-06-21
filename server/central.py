@@ -121,7 +121,7 @@ class CentralNode(LoggerMixin):
         """
         Returns a name server proxy
         """
-        return locate_ns([x[SERV_NS] for x in self.server_addresses])
+        return locate_ns([self.ns_address] + [x[SERV_NS] for x in self.server_addresses])
     
     def name_server_loop(self):
         """

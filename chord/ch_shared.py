@@ -56,36 +56,41 @@ def remove_name_from_ns(name:str, ns_addresses: list, current_value=None):
     remove the name 
     """
     ns_addresses = ns_addresses.copy()
-    while ns_addresses:
-        addr = ns_addresses.pop()
+    def remove_name_from_single_ns(addr):
         try:
             with locate_ns([addr]) as ns:
                 if current_value:
                     value = ns.lookup(name)
                     if value != current_value:
-                        continue
+                        return
                 ns.remove(name)
         except Exception as exc:
             log.debug(f"Error removing {name} name server located at {addr}. {exc}")
-            
+                    
+    with ThreadPoolExecutor() as executor:
+        tasks = [executor.submit(remove_name_from_single_ns, addr) for addr in ns_addresses]
+        for t in as_completed(tasks):
+            log.debug(f"Removing {name} from NS task finished")
+    
 def locate_ns(ns_addresses: list, amounts:int=NS_TRY_AMOUNT, retry_time:int=NS_TIME_RETRY)->pyro.Proxy:
     """
     Returns a responding name server among the ns_addresses
     """
     while amounts > 0:
         exceptions = []
-        tasks=[]
            
-        with ThreadPoolExecutor() as executor:
-            tasks = [executor.submit(pyro.locateNS, ns_host, ns_port)for ns_host, ns_port in ns_addresses]
-            for task in as_completed(tasks):
-                try:
-                    ns=task.result()
-                    if not ns is None:
-                        ns.ping() # Check if it is alive
-                        return ns
-                except Exception as exc:
-                    exceptions.append(exc)
+        executor = ThreadPoolExecutor()
+        tasks = [executor.submit(pyro.locateNS, ns_host, ns_port)for ns_host, ns_port in ns_addresses]
+        for task in as_completed(tasks):
+            try:
+                ns=task.result()
+                if not ns is None:
+                    ns.ping() # Check if it is alive
+                    executor.shutdown(False)
+                    return ns
+            except Exception as exc:
+                exceptions.append(exc)
+        executor.shutdown(False)
         try:
             raise exceptions[0]
         except pyro.errors.PyroError as exc:
