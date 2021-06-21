@@ -1,9 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from shared.clock import ClockMixin
 from shared.utils import wait
-from chord.ch_node import ChordNode, sum_id
+from chord.ch_node import ChordNode, ChordNodeEntry, sum_id
 from chord.ch_shared import create_object_proxy, locate_ns, method_logger
-from typing import List,Dict,Tuple, Union
+from typing import Iterable, List,Dict,Tuple, Union
 from shared.const import *
 from config import CACHE_THRESHOLD_SECONDS, WRITE_AMOUNT_SAVE_STATE
 from server.storage import StorageNode
@@ -15,6 +15,51 @@ import Pyro4 as pyro
 import time
 from threading import Barrier
 import hashlib
+
+class RingNodeEntry(ChordNodeEntry):
+    def __init__(self, values: URLState) -> None:
+        super().__init__(values)
+        self.url, self.time, self.html = values
+        self.values:URLState = (self.url,self.time,self.html)
+        self.index = 0
+    
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.index == len(self.values):
+            raise StopIteration
+        self.index = self.index + 1 
+        return self.values[self.index]
+
+    def __getitem__(self, index:int):
+        if not all([index > -1, index< len(self.values)]):
+            raise NotImplemented
+        if isinstance(index,int):
+            return self.values[index]
+        else:
+            raise NotImplemented
+
+    def __setitem__(self, index,value):
+        if not all(index > -1, index < len(self.values)):
+            raise NotImplemented
+        if isinstance(index, int):
+            item=self.values[index]
+            if isinstance(value,type(item)):
+                self.values[index] = value
+            else:
+                raise NotImplemented
+        else:
+            raise NotImplemented
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o,RingNodeEntry):
+            if isinstance(o,Iterable):
+                return self.values[0] == o[0]
+            else:
+                return False
+        return self.values[0]==o.values[0]
+
 
 @pyro.expose
 class RingNode(LoggerMixin,ClockMixin, ChordNode):
@@ -30,7 +75,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         return self.in_between(id, self.predecessor+1, self.id+1)
     
-    def hash(self, value:URLState):
+    def hash(self, value:RingNodeEntry):
         """
         Overriden hash function to provide DictionarySupport
         """
@@ -38,7 +83,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             return self.url_hash(value)
         return self.url_hash(value[ST_URL])
     
-    def equal(self, list_value:URLState, lookup_value:str):
+    def equal(self, list_value:RingNodeEntry, lookup_value:str):
         """
         Overriden equal function for comparing values
         """
@@ -100,7 +145,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         self.load_entries()
     
     @method_logger
-    def insert_state(self, state:URLState):
+    def insert_state(self, state:RingNodeEntry):
         """
         Insert given state into the DHT
         """
@@ -113,9 +158,9 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             self.save_entries()
     
     @method_logger
-    def fetch_url(self, url:str, state_checked:bool=False)->URLState:
+    def fetch_url(self, url:str, state_checked:bool=False)->RingNodeEntry:
         """
-        Create and return a URLState for given url. If state_checked it will not verify if the 
+        Create and return a RingNodeEntry containing a URLState for given url. If state_checked it will not verify if the 
         url is already in the DHT 
         """
         url_hash = self.url_hash(url)
@@ -125,7 +170,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             if not state_checked: # Check if already in DHT
                 state = self.fetch_url_state(url)
                 if state is not None and self.is_cache_valid(state):
-                    return state
+                    return RingNodeEntry(state)
 
             #  Fetch URL
             scrapped = self.fetcher.fetch_url(url)
@@ -133,7 +178,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
                 print(scrapped[SCR_ERROR], type(scrapped[SCR_ERROR]))
                 raise Exception(scrapped[SCR_ERROR])
             else:
-                return get_url_state(url, self.get_ds_time(), scrapped[SCR_HTML])
+                return RingNodeEntry(get_url_state(url, self.get_ds_time(), scrapped[SCR_HTML]))
         else:
             # Other node is responsible for this url
             suc = self.find_successor(url_hash)
@@ -207,7 +252,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         self.save_entries()
         return super().leave()
     
-    def update_state_values(self, new_states: Dict[int,List[URLState]]):
+    def update_state_values(self, new_states: Dict[int,List[RingNodeEntry]]):
         """
         Update values with given values taking in count posible conflicts.
         """
@@ -225,7 +270,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
             values[i] = current_entries
         self.update_values(values)
                 
-    def is_cache_valid(self, state:URLState):
+    def is_cache_valid(self, state:RingNodeEntry):
         """
         Return if the HTML is valid to return to the client 
         """
@@ -242,7 +287,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         return self.getClockTime()
     
-    def fetch_url_state(self, url:str)->URLState:
+    def fetch_url_state(self, url:str)->RingNodeEntry:
         try:
             state = self.lookup(url)
             return state
