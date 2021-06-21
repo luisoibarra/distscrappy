@@ -47,12 +47,21 @@ class FingerTableEntry:
     def __repr__(self):
         return str(self)
 
+class ChordNodeEntry:
+    def __init__(self,values:object) -> None:
+        self.values:object = values
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o,ChordNodeEntry):
+            return NotImplemented
+        return self.values==o.values
+
 @pyro.expose
 class ChordNode:
     
     CHORD_NODE_PREFIX = "chord.node."
     
-    def hash(self, value):
+    def hash(self, value: ChordNodeEntry):
         """
         Hash function used by ChordNode
         """
@@ -117,12 +126,12 @@ class ChordNode:
         self.successor_list:List[object] = []
         self.stabilization = stabilization
         self.running = False
-        self.values:Dict[object,List[object]]= {}
+        self.values:Dict[object,List[ChordNodeEntry]]= {}
         self.executor = ThreadPoolExecutor()
         self.finger_table = None
         
     @method_logger
-    def lookup(self, value):
+    def lookup(self, value: ChordNodeEntry):
         """
         Returns the value associated with the value 
         """
@@ -133,7 +142,7 @@ class ChordNode:
         successor = self.get_node_proxy(successor_id)
         return successor.lookup(value)
     
-    def local_lookup(self, key: int, value):
+    def local_lookup(self, key: int, value: ChordNodeEntry):
         """
         Returns the asociated value in this node in case of any. 
         
@@ -146,7 +155,7 @@ class ChordNode:
             raise KeyError(f"Value {value} not found in DHT")
     
     @method_logger
-    def insert(self, value, key=None):
+    def insert(self, value: ChordNodeEntry, key=None):
         """
         Insert value into the DHT. If key is given then it will be inserted with it.
         """
@@ -162,7 +171,7 @@ class ChordNode:
             successor.insert(value, key)
     
     @method_logger
-    def insert_local(self, key: int, value: object):
+    def insert_local(self, key: int, value: ChordNodeEntry):
         """
         Insert the given value with given key in this node
         """
