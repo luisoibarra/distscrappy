@@ -22,6 +22,7 @@ def start():
         time.sleep(2)
         ring_task = executor.submit(ir.start,i)
         ring_tasks.append(ring_task)
+        time.sleep(16)
     for t in ring_tasks:
         print(t.result())
             

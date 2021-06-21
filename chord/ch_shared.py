@@ -3,6 +3,7 @@ from shared.const import NS_TIME_RETRY, NS_TRY_AMOUNT
 import Pyro4 as pyro
 from Pyro4.errors import CommunicationError
 import logging as log
+from concurrent.futures import ThreadPoolExecutor,as_completed
 
 from Pyro4.core import Proxy, URI
 
@@ -73,11 +74,16 @@ def locate_ns(ns_addresses: list, amounts:int=NS_TRY_AMOUNT, retry_time:int=NS_T
     """
     while amounts > 0:
         exceptions = []
-        for ns_host, ns_port in ns_addresses:
+        tasks=[]
+           
+        with ThreadPoolExecutor() as executor:
             try:
-                ns = pyro.locateNS(ns_host, ns_port)
-                ns.ping() # Check if it is alive
-                return ns
+                tasks = [executor.submit(pyro.locateNS, ns_host, ns_port)for ns_host, ns_port in ns_addresses]
+                for task in as_completed(tasks):
+                    ns=task.result()
+                    if not ns is None:
+                        ns.ping() # Check if it is alive
+                        return ns
             except Exception as exc:
                 exceptions.append(exc)
         try:
