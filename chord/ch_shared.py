@@ -40,7 +40,7 @@ def create_object_proxy(name, ns_addresses: List[IP_DIR], ns_cache: Dict[str, UR
     ro = create_proxy(object_uri)
     
     try:
-        ro._pyroTimeout = 10 # Wait seconds
+        ro._pyroTimeout = 16 # Wait seconds
         ro._pyroBind() # Check if the remote object is alive
     except CommunicationError as exc:
         ns_cache.pop(name, None)
