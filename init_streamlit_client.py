@@ -7,6 +7,7 @@ import logging as log
 from config import *
 import streamlit.components.v1 as components  # Import Streamlit
 import os.path
+import time
 
 
 def start():
@@ -37,7 +38,7 @@ def start():
                               min_value=0, max_value=3, value=1, step=1)
 
     st.info('Time to scrape depends of depth level ,\
-         the amount (and complexity) of the urls sites, and the network speed')
+         the amount (and complexity) of the urls scrapped, the network speed and network availability')
 
     html_preview_chckbx = st.sidebar.checkbox('Show html preview', value=True)
 
@@ -49,6 +50,8 @@ def start():
         st.warning(
             "This action could take several minutes depending of depth level")
         i = 0
+        clock = time.time()
+
         progress_bar = st.progress(i)
         frame_text=st.empty()
 
@@ -57,6 +60,8 @@ def start():
         client = DistScrappyClient([x for x,_,_ in SERVER_NS_ZMQ_ADDRS])
 
         level_result = client.start(urls,depth)
+        clock = time.time()- clock
+        st.subheader(f'Done in {round(clock,1)} secs')
 
         total = float(sum([ sum( [len(item) for item in dictio.values()] ) for dictio in level_result.values() ] ))
         
