@@ -84,6 +84,7 @@ class StorageNode(LoggerMixin):
             self._dir = daemon.register(self)
             executor = ThreadPoolExecutor()
             executor.submit(self.register_ns_loop, self._dir)
+            executor.submit(self.cli_loop)
             self.log_info("Storage Node Started")
             daemon.requestLoop(lambda : self.running)
         executor.shutdown()
@@ -93,7 +94,38 @@ class StorageNode(LoggerMixin):
         Stops storage node service
         """
         self.running = False
-        
+    
+    def cli_loop(self):
+        """
+        Command line interface loop
+        """
+        help_msg = "Commands:\n\nany INF SUP: Prints the keys with values associated to given range\nkey KEY: prints the values associated with given key\nhelp: prints this message\nstop: Stop current node\n"
+        while self.running:
+            command = input()
+            try:
+                if not command:
+                    print(help_msg)
+                    continue
+                command, *args = command.split()
+                if command == "help":
+                    print(help_msg)
+                elif command == "any" and len(args) == 2:
+                    inf,sup = int(args[0]), int(args[1])
+                    entries = self.get_entries([i for i in range(inf, sup)])
+                    print([x for x in entries])
+                elif command == "key" and len(args) == 1:
+                    key = int(args[0])
+                    entry = self.get_entries([key])
+                    print(str(entry[key])[:120])
+                if command == "stop":
+                    self.stop()
+                    break
+                else:
+                    print(f"Unrecognized command {command}")
+                    print(help_msg)
+            except Exception as exc:
+                print(exc)
+                
     def register_ns_loop(self, dir:URI):
         """
         Periodiacally register in the name servers

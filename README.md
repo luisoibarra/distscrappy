@@ -2,11 +2,12 @@
 
 **DistScrappy** permite realizar el llamado scrapping de la web de manera distribuída. Su función actual es descargar las URLs de las páginas web hasta diferentes niveles. Se basa en una implementación de una Distributed Hash Table (DHT) usando el protocolo Chord.
 
-### Dependencias más importantes pip:
+## Dependencias más importantes pip
+
 - streamlit
 - plac
 - bs4
-- lxml 
+- lxml
 
 ## Uso básico
 
@@ -113,6 +114,7 @@ El caching mejora nuestro programa ,reduciendo el tiempo de descarga en una déc
 También contamos con un sección de tiempo para visualizar mejor el efecto del mismo
 
 #### Estadísticas del Caching
+
 | URL        | Depth Level 1  | Download Time  |Caching Time      |
 |------------|---------------|----------------|------------------|
 | www.uh.cu  |  149 sites         |  96.6 - 292.7  | 5.1 - 9.8 - 14.4 |
@@ -129,7 +131,7 @@ La arquitectura de **DistScrappy** se conforma principalmente de dos partes. La 
 
 **DistScrappy** usa tres protocolos de comunicación. El primero de estos es HTTP, el cual se usa a la hora de brindar el servicio a los clientes. Otro protocolo es el usado por **zmq** el cual se encarga principalmente de la comunicación entre los nodos centrales del sistema. Por último se encuentra el usado por **Pyro**, es el que más predomina ya que es el encargado de la comunicación nodos centrales-nodos trabajadores, nodos trabajadores-nodos trabajadores, nodo almacenamiento-nodos trabajadores.
 
-Para prevenir errores de comunicación, sobre los mencionados protocolos se crearon otros protocolos para el consumo de estos que se acercan más al necesitado por el sistema. Ejemplos de estos protocolos se pueden observar en *chord.ch_shared.py* donde se muestran funciones para el manejo del nombrado usando múltiples name servers de Pyro. Para aliviar la carga a los name server se implementó un sistema de caché para las direcciones, disminuyendo grandemente los pedidos a los name servers permitiendo la comunicación más directa entre objetos remotos .
+Para prevenir errores de comunicación, sobre los mencionados protocolos se crearon otros protocolos para el consumo de estos que se acercan más al necesitado por el sistema. Ejemplos de estos protocolos se pueden observar en *chord.ch_shared.py* donde se muestran funciones para el manejo del nombrado usando múltiples name servers de **Pyro**. Para aliviar la carga a los name server se implementó un sistema de caché para las direcciones, disminuyendo grandemente los pedidos a los name servers permitiendo la comunicación más directa entre objetos remotos .
 
 
 
@@ -137,10 +139,10 @@ Para prevenir errores de comunicación, sobre los mencionados protocolos se crea
 
 El pipeline natural que siguen los pedidos del sistema en el cliente es el siguiente:
 
-1. Cliente hace el HTTP request de las URLs a los nodos centrales.
-2. Los nodos centrales le mandan el pedido a los nodos trabajadores de la DHT mediante un RPC.
+1. Cliente hace el HTTP request con las URLs a los nodos centrales.
+2. Los nodos centrales mandan el pedido a los nodos trabajadores de la DHT mediante un RPC.
 3. Los nodos trabajadores localizan el nodo encargado de cada URL.
-4. El nodo encargado de cada URL la descarga o devuelve la versión guardada en la caché, mediante el callstack regresa el resultado al nodo que hizo el pedido.
+4. El nodo encargado de cada URL la descarga o devuelve la versión guardada en la caché, mediante el callstack regresa el resultado al nodo central que hizo el pedido.
 5. Se realiza un HTTP response al cliente con la información deseada.
 
 ![pipeline](images/pipeline.jpg)
@@ -171,9 +173,10 @@ foo@bar:-$ python init_streamlit_client.py
 Al usar HTTP es muy fácil consumir el servicio brindado por **DistScrappy** sin el uso explícito de la API brindada, realizando un HTTP request con el formato especificado a la dirección de los servidores.
 
 ### Scrapping
+
 El scrapping es realizado por la clase *DistScrappyClient* el cual es utilizado en los programas listos para su uso provistos en **DistScrappy**.
 
-En el scrapping se desea descargar un conjunto de URLs iniciales a una profundidad determinada. Cada una de estas url iniciales constituyen los dominios de url a partir de los cuales scrapear, al pasarle varias URLs al cliente estas conformarán todo el conjunto de dominio de las URLs, permitiendo que hayan vínculos entre descendientes de estos dominios.
+En el scrapping se desea descargar un conjunto de URLs iniciales a una profundidad determinada. Cada una de estas URLs iniciales constituyen los dominios de URL a partir de los cuales scrapear, al pasarle varias URLs al cliente estas conformarán todo el conjunto de dominio de las URLs, permitiendo que hayan vínculos entre descendientes de estos dominios.
 
 Utilizamos **BeautifulSoup** con el parser *lxml* para procesar el HTML recibido y a partir de ahí obtener los enlaces siguientes los cuales también se preprocesan para agregarlos a las URLs de las cuales salieron en caso de ser necesario.
 
@@ -217,15 +220,15 @@ Parte encargada del funcionamiento del sistema distribuido. Su principal tarea e
 
 ### Configuración del sistema
 
-En el archivo *config.py* se encuentran las direcciones defecto de los nodos, estos se pueden modificar de acuerdo a dónde se vayan a encuentrar los nodos. Además se encuentran otros parámetros los cuales pueden er modificados de acuerdo las características y necesidades con que se corra el sistema.
+En el archivo *config.py* se encuentran las direcciones defecto de los nodos, estos se pueden modificar de acuerdo a dónde se vayan a encuentrar los nodos. Además se encuentran otros parámetros los cuales pueden ser modificados de acuerdo las características y necesidades con que se corra el sistema.
 
 ### Nombrado
 
-**DistScrappy** posee un sistema de nombrado en la que se guardan las direcciones de los objetos reales asociados a un nombre previamente dado que los identifica en el sistema, ejemplo de los nombres que se guardan son el de los trabajadores del sistema. Para el nombrado de los componentes del sistema distribuido se utliza como base la implementación de name servers de **Pyro4**.
+**DistScrappy** posee un sistema de nombrado en la que se guardan las direcciones de los objetos reales asociados a un nombre previamente dado que los identifica en el sistema, ejemplo de los nombres que se guardan son el de los trabajadores del sistema. Para el guardar las direcciones de los nombres de los componentes del sistema distribuido se utliza como base la implementación de name servers de **Pyro4**.
 
 ### Sincronización
 
-Debido a que **DistScrappy** utiliza un sistema basado en el tiempo relativo hace falta mantener a los nodos de acuerdo con el tiempo del sistema, para esto se utiliza el algoritmo de Berkeley.
+Debido a que **DistScrappy** utiliza un sistema basado en el tiempo relativo hace falta mantener a los nodos de acuerdo con el tiempo del sistema, para esto se utiliza el algoritmo de Berkeley. El cual sincroniza periódicamente el reloj de los nodos trabajadores.
 
 Otros tipos de sincronización son logrados mediante el uso de Locks y llamados RPC como es el caso del nodo de almacenamiento *server.storage.StorageNode*.
 
@@ -259,11 +262,11 @@ Para el manejo de los pedidos de los clientes en cada nodo central se crea un se
 
 #### Coordinación
 
-Entre los nodos centrales se mantiene un coordinador, el cual es el encargado de realizar tareas de mantenimiento en el sistema como la de sincronización de los name servers y del tiempo en los nodos. Este coordinador es seleccionado mediante el algoritmo Bully y se mantiene vigilancia sobre él para en caso de fallar se reeliga uno nuevo.
+Entre los nodos centrales se mantiene un coordinador, el cual es el encargado de realizar tareas de mantenimiento en el sistema como la de sincronización de los name servers y del tiempo en los nodos. Este coordinador es seleccionado mediante el algoritmo Bully y se mantiene vigilancia sobre él para en caso de fallar se reelija uno nuevo.
 
-#### Nombrado 
+#### Nombrado
 
-Estos nodos son encargados de hostear un name server para proveer del un servicio de nombrado al sistema. Para mantener la consistencia de los name servers periódiamente estos se actualizan mutuamente. 
+Estos nodos son encargados de hostear un name server para proveer del un servicio de nombrado al sistema. Para mantener la consistencia de los name servers periódiamente estos se actualizan mutuamente. En la actalización se unen todas las llaves de los name servers y se agregan las faltantes en los otros name servers a estos, esto asegura de que no se pierdan llaves entre name servers. En el caso de que un objeto deje de estar activo el sistema lo detecta y lo borra de los name servers. 
 
 #### Toleracia a fallas
 
@@ -302,7 +305,7 @@ Cada nodo es responsable por descargar las URLs que le corresponde guardar segú
 
 #### Cachear
 
-Al ser los nodos trabajadores nodos pertenecientes a una DHT se salvan los HTML scrappeados en ella. Para la validez de la cache se tiene en cuenta un umbral de tiempo encontrado en *config.py*, si viene un pedido de una URL que se cumpla la condición de validez, el HTML no es descargado y es devuelto inmediatamente.
+Al ser los nodos trabajadores nodos pertenecientes a una DHT se salvan los HTML scrappeados en ella. Para la validez de la caché se tiene en cuenta un umbral de tiempo encontrado en *config.py*, si viene un pedido de una URL que se cumpla la condición de validez, el HTML no es descargado y es devuelto inmediatamente.
 
 #### Persistencia
 
@@ -312,7 +315,7 @@ Para que los datos guardados sobrevivan el suceso de caída de un nodo se realiz
 
 La tolerancia a fallas en este caso se tiene que ver de manera colectiva, ya que estos nodos forman parte de un conjunto mayor. Gracias al protocolo Chord no importa que un nodo falle ya que el anillo se arreglará eventualmente con el proceso de estabilización.
 
-Para evitar la partición de los **RingNodes* se tomó la medida forzar la introducción de un nodo aleatorio de la DHT en el anillo correspondiente al nodo que se está estabilizando. Esto conduce a una unión natural entre dos particiones de la DHT en caso de que el anillo insertado se encontraba en otra partición.
+Para evitar la partición de los *RingNodes* se tomó la medida de forzar la introducción de un nodo aleatorio de la DHT en el anillo correspondiente al nodo que se está estabilizando. Esto conduce a una unión natural entre dos particiones de la DHT en caso de que el nodo insertado se encontraba en otra partición.
 
 ### Nodo Almacenamiento *StorageNode*
 
@@ -332,7 +335,7 @@ Este nodo guarda en las entradas de la DHT en formato JSON para conservar el est
 
 #### Consistencia
 
-Para evitar el acceso a varios recursos al mismo tiempo este nodo implementa un sistema de sincronización basado en Locks de Python que permite un acceso seguro a los datos y así mantener la consistencia. 
+Para evitar el acceso a varios recursos al mismo tiempo este nodo implementa un sistema de sincronización basado en Locks de Python que permite un acceso seguro a los datos y así mantener la consistencia.
 
 #### Tolerancia a fallas
 
