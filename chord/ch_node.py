@@ -58,12 +58,18 @@ class ChordNode:
         """
         return hash(value) % (self.max_nodes) 
     
-    def equal(self, list_value, lookup_value):
+    def equal(self, entry_value, lookup_value):
         """
         Equal function for comparing values
         """
-        return list_value == lookup_value
+        return entry_value == lookup_value
     
+    def entry_equal(self, entry1, entry2):
+        """
+        Equal function for camparing dht entries
+        """
+        return entry1 == entry2
+
     @classmethod
     def node_name(cls, id):
         """
@@ -167,10 +173,13 @@ class ChordNode:
         Insert the given value with given key in this node
         """
         if key in self.values:
-            try:
-                self.values[key].remove(value) # Remove old value if exist
-            except ValueError:
-                pass
+            remove = None
+            for i,v in enumerate(self.values[key]):
+                if self.entry_equal(value, v):
+                    remove = i
+                    break
+            if not remove is None:
+                self.values[key].pop(remove)
             self.values[key].append(value)
         else:
             self.values[key] = [value]

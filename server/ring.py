@@ -44,6 +44,9 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         """
         return list_value[0] == lookup_value
 
+    def entry_equal(self, entry1:URLState, entry2:URLState):
+        return entry1[ST_URL] == entry2[ST_URL] 
+
     def url_hash(self, url:Union[URI, str, int]):
         """
         Hash function used to get urls hash
