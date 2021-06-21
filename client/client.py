@@ -4,6 +4,7 @@ import http.client as http_c
 import random
 from typing import List,Dict
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor,as_completed
 
 
 class DistScrappyClient:
@@ -20,8 +21,19 @@ class DistScrappyClient:
         levels = {}
 
         random.shuffle(server_dirs)
-        for host, port in server_dirs:
-            conn = http_c.HTTPConnection(host, port)
+        
+            
+        with ThreadPoolExecutor() as executor:
+            tasks = [executor.submit(check_server,host, port)
+                         for host, port in server_dirs]
+            for task in as_completed(tasks):
+                exec = task.exception()
+                if exec is None:
+                    conn=task.result()  # Check if it is alive
+                    break
+                errors.append(exec.args[0])
+            else:#for/else se ejecuta si el ciclo termina normalmente
+                raise ConnectionError("\n".join(errors))
             try:
 
                 actual_deep = 0
@@ -96,5 +108,13 @@ class DistScrappyClient:
             raise exc
                 
 
+def check_server(host: str, port: int):
+    """
+    Check if the connection can be stablished returning it if it was posible.
+    """
+    conn=http_c.HTTPConnection(host,port)
+    conn.request("GET", "", b"", {"Content-Length": len(b"")})
+    resp = conn.getresponse()
+    return conn
 
 # fetch http://www.cubaeduca.cu http://www.etecsa.cu http://www.uci.cu http://evea.uh.cu http://www.uo.edu.cu http://www.uclv.edu.cu http://covid19cubadata.uh.cu http://www.uh.cu
