@@ -19,8 +19,9 @@ def start():
             -select the depth level to scrape for \n
             -then click the fetch button to fetch those url\n
             Before clicking fetch button you can check this options:\n
-            -(Optional) mark the Show HTML to show the html code of the fetched page(s)\n
-            -(Optional) mark the Save HTML to save the html code of the fetched page(s)\n
+            -(Optional) mark the Show HTML preview to show the html preview of the fetched page(s)\n
+            -(Optional) mark the Show HTML code to show the html code of the fetched page(s)\n
+            -(Optional) mark the Save HTML code to save the html code of the fetched page(s)\n
             ''')
 
 
@@ -38,9 +39,8 @@ def start():
     st.info('Time to scrape depends of depth level ,\
          the amount (and complexity) of the urls sites, and the network speed')
 
-    
+    html_preview_chckbx = st.sidebar.checkbox('Show html preview', value=True)
 
-    
     html_code_chckbx = st.sidebar.checkbox('Show html code', value=False)
 
     html_save_chckbx = st.sidebar.checkbox('Save html code', value=False)
@@ -73,12 +73,15 @@ def start():
                 progress_bar.progress(i/total)
                 frame_text.text(f"url(s) {i}/{total}")
 
-                st.write(int(i),'-',url, "👇")
+                st.write(int(i),'-',url)
 
-                # Render the result, contained in a frame of size 200x200.
-                components.html(html, width=800, height=600, scrolling=True)
+                if html_preview_chckbx:
+                    st.write("Preview", "👇")
+                    # Render the result, contained in a frame of size 200x200.
+                    components.html(html, width=800, height=600, scrolling=True)
 
                 if html_code_chckbx:
+                    st.write("Code", "👇")
                     st.write(html)
 
                 if html_save_chckbx:
