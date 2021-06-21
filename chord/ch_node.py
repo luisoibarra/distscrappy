@@ -126,6 +126,7 @@ class ChordNode:
         self.values:Dict[object,List[object]]= {}
         self.executor = ThreadPoolExecutor()
         self.finger_table = None
+        self.ns_cache = {}
         
     @method_logger
     def lookup(self, value):
@@ -248,12 +249,10 @@ class ChordNode:
         
         log.info("Removing current node from name servers")
         name = type(self).node_name(id)
-        for ns_addr in self.name_servers:
-            try:
-                with locate_ns([ns_addr]) as ns:
-                    ns.remove(name)
-            except Exception as exc:
-                log.exception(exc)
+        try:
+            remove_name_from_ns(name, self.name_servers)
+        except Exception as exc:
+            log.exception(exc)
                 
         self.daemon.shutdown()
     
@@ -357,18 +356,27 @@ class ChordNode:
         else: # Cancelled 
             raise Exception("Node stopped")            
         
+        node = self._get_random_active_node(availables)
+        if node:
+            log.info(f"Returned initial node {node.id}")
+        else:
+            log.info(f"Empty DHT {node} returned")
+        return node
+        
+    def _get_random_active_node(self, availables: Dict[str,URI]):
+        """
+        Return a available node from availables. None if all are unavailables
+        """
         while availables:
             node_name, node_address = random.choice([x for x in availables.items()])
             try:
-                node = create_object_proxy(node_name, self.name_servers)
-                node_id = node.id # Check if node is alive
-                log.info(f"Returned initial node {node_id} with address {node_address}")
+                node = create_object_proxy(node_name, self.name_servers, self.ns_cache)
                 return node
             except (pyro.errors.CommunicationError, pyro.errors.NamingError):
                 log.info(f"Node {node_name} offline")
                 availables.__delitem__(node_name)
         return None
-                
+            
     def in_between(self, key, lwb, upb, equals=True):
         """
         Checks if key is between lwb and upb with modulus 2**bits
@@ -416,7 +424,7 @@ class ChordNode:
         """
         Called when joining the DHT
         """
-        # coordinator = create_object_proxy(ChordCoordinator.ADDRESS, self.name_servers)
+        # coordinator = create_object_proxy(ChordCoordinator.ADDRESS, self.name_servers, self.ns_cache)
         # coordinator.register(self.id, self.dir)
         pass
             
@@ -456,13 +464,47 @@ class ChordNode:
         while self.running:
             try:
                 self.stabilize()
+                self.anti_partition()
             except TypeError as exc:
-                # log.error(str(exc))
-                pass
+                log.error(str(exc))
+                # pass
             except Exception as exc:
                 log.exception(exc)
             time.sleep(interval_milliseconds/1000)
     
+    @method_logger
+    def anti_partition(self):
+        """
+        Fetch a random active node from the name server an add it to the DHT.  
+        In case of DHT is partitioned this method will eventually join al partitions
+        """
+        if random.random() > 1/self.bits:
+            return
+        
+        with locate_ns(self.name_servers) as ns:
+            availables = ns.list(prefix=type(self).CHORD_NODE_PREFIX)
+        
+        node = self._get_random_active_node(availables)
+        
+        if node:
+            node_id = node.id
+            succ_id = self.find_successor(node_id)
+            succ = self.get_node_proxy(succ_id)
+            self.insert_between(node, succ)
+    
+    def insert_between(self, node_to_insert, node):
+        """
+        Insert if posible node_to_insert between node.predecessor and node
+        """
+        pred_old_successor_id = node.predecessor
+        node_to_insert_id = node_to_insert.id
+        if pred_old_successor_id != None and self.in_between(node_to_insert_id, self.sum_id(pred_old_successor_id, 1), node.id, equals=False):
+            node_to_insert.successor = node.id
+            node_to_insert.predecessor = pred_old_successor_id
+            node.predecessor = node_to_insert_id
+            pred = self.get_node_proxy(pred_old_successor_id)
+            pred.successor = node_to_insert_id
+        
     @method_logger
     def stabilize(self):
         """
@@ -615,7 +657,7 @@ class ChordNode:
         Returns a Chord Node proxy for the given id
         """
         if id != self.id:
-            node = create_object_proxy(ChordNode.node_name(id), self.name_servers)
+            node = create_object_proxy(ChordNode.node_name(id), self.name_servers, self.ns_cache)
         else:
             node = self
         return node

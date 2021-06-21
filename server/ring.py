@@ -23,6 +23,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         super().__init__(*args, **kwargs)
         self.fetcher = URLFetcher()
         self.writes_amount = 0
+        self.ns_cache = {}
     
     def is_responsible_for(self, id:int)->bool:
         """
@@ -198,7 +199,7 @@ class RingNode(LoggerMixin,ClockMixin, ChordNode):
         exc = None
         while attempt > 0:
             try:
-                storage = create_object_proxy(StorageNode.NAME_PREFIX, self.name_servers)
+                storage = create_object_proxy(StorageNode.NAME_PREFIX, self.name_servers, self.ns_cache)
                 return storage
             except Exception as ex:
                 exc = ex

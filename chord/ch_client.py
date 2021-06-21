@@ -8,7 +8,8 @@ class ChordSimpleConsumer:
     def __init__(self, ns_port, ns_host):
         self.ns_port = ns_port
         self.ns_host = ns_host
-        self.coordinator = create_object_proxy(ChordCoordinator.ADDRESS, [(self.ns_host, self.ns_port)])
+        self.ns_cache = {}
+        self.coordinator = create_object_proxy(ChordCoordinator.ADDRESS, [(self.ns_host, self.ns_port)], self.ns_cache)
         
         
     def get_chord_node(self):
@@ -16,7 +17,7 @@ class ChordSimpleConsumer:
         if id == None:
             print("Chord DHT is empty")
             return
-        node = create_object_proxy(ChordNode.node_name(id), [(self.ns_host, self.ns_port)])
+        node = create_object_proxy(ChordNode.node_name(id), [(self.ns_host, self.ns_port)], self.ns_cache)
         return node
 
     def get_value(self, key):

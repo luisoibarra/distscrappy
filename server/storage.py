@@ -37,6 +37,7 @@ class StorageNode(LoggerMixin):
             os.mkdir(base)
         self.running = False
         self._dir = None
+        self.ns_cache = {}
         
     def _get_lock(self, id:int)->Lock:
         """
@@ -100,7 +101,7 @@ class StorageNode(LoggerMixin):
         while self.running:
             try:
                 try:
-                    storage = create_object_proxy(type(self).NAME_PREFIX, self.ns_dirs)
+                    storage = create_object_proxy(type(self).NAME_PREFIX, self.ns_dirs, self.ns_cache)
                     storage_dir = str(storage.dir)
                     self_dir = str(self.dir)
                     if storage_dir > self_dir:
