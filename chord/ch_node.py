@@ -126,6 +126,7 @@ class ChordNode:
         self.values:Dict[object,List[object]]= {}
         self.executor = ThreadPoolExecutor()
         self.finger_table = None
+        self.ns_cache = {}
         
     @method_logger
     def lookup(self, value):
@@ -248,12 +249,10 @@ class ChordNode:
         
         log.info("Removing current node from name servers")
         name = type(self).node_name(id)
-        for ns_addr in self.name_servers:
-            try:
-                with locate_ns([ns_addr]) as ns:
-                    ns.remove(name)
-            except Exception as exc:
-                log.exception(exc)
+        try:
+            remove_name_from_ns(name, self.name_servers)
+        except Exception as exc:
+            log.exception(exc)
                 
         self.daemon.shutdown()
     
@@ -360,7 +359,7 @@ class ChordNode:
         while availables:
             node_name, node_address = random.choice([x for x in availables.items()])
             try:
-                node = create_object_proxy(node_name, self.name_servers)
+                node = create_object_proxy(node_name, self.name_servers, self.ns_cache)
                 node_id = node.id # Check if node is alive
                 log.info(f"Returned initial node {node_id} with address {node_address}")
                 return node
@@ -416,7 +415,7 @@ class ChordNode:
         """
         Called when joining the DHT
         """
-        # coordinator = create_object_proxy(ChordCoordinator.ADDRESS, self.name_servers)
+        # coordinator = create_object_proxy(ChordCoordinator.ADDRESS, self.name_servers, self.ns_cache)
         # coordinator.register(self.id, self.dir)
         pass
             
@@ -615,7 +614,7 @@ class ChordNode:
         Returns a Chord Node proxy for the given id
         """
         if id != self.id:
-            node = create_object_proxy(ChordNode.node_name(id), self.name_servers)
+            node = create_object_proxy(ChordNode.node_name(id), self.name_servers, self.ns_cache)
         else:
             node = self
         return node

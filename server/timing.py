@@ -17,6 +17,7 @@ class TimeSynchronization(LoggerMixin):
     def __init__(self) -> None:
         super().__init__()
         self.running = False
+        self.ns_cache = {}
         
     
     def startRecieveingClockTime(self, node:Proxy, client_data:Dict[float, Dict[str,Union[float,Proxy]]]):
@@ -57,7 +58,7 @@ class TimeSynchronization(LoggerMixin):
                 tasks = []
                 for client_name , client_address in availables.items():
                     try:
-                        node:Proxy = create_object_proxy(client_name, ns_addresses)
+                        node:Proxy = create_object_proxy(client_name, ns_addresses, self.ns_cache)
                     except pyro.errors.PyroError as exc:
                         self.log_info(f"Error creating proxy for {client_name}")
                         continue
