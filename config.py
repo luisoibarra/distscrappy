@@ -38,5 +38,8 @@ CACHE_THRESHOLD_SECONDS = 120
 # Clock syncronization delay
 CLOCK_SYNC_DELAY_SECONDS = 40
 
+# Register delay for storage node sync with name servers
+STORAGE_NS_SYNC_DELAY_SECONDS = 60
+
 # Write amount needed to save node state
 WRITE_AMOUNT_SAVE_STATE = 10

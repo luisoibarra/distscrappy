@@ -63,7 +63,7 @@ class NSSync(LoggerMixin):
             tasks.clear()
             
             for ns_addr in addresses_per_ns:
-                self.log_error(f"TEMPORAL: {ns_addr} has {addresses_per_ns[ns_addr]}")
+                self.log_debug(f"Name Server: {ns_addr} has {addresses_per_ns[ns_addr]}")
             
             time.sleep(sleep_time)
 

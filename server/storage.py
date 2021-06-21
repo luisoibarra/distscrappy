@@ -1,12 +1,16 @@
+from Pyro4.core import URI
+from config import STORAGE_NS_SYNC_DELAY_SECONDS
 from shared.logger import LoggerMixin
 from shared.const import *
 import Pyro4 as pyro
-from chord.ch_shared import locate_ns
+from Pyro4.errors import PyroError
+from chord.ch_shared import locate_ns, create_object_proxy
 from shared.error import StorageError
 import time
 from typing  import List, Dict
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
 
@@ -32,7 +36,8 @@ class StorageNode(LoggerMixin):
         if not os.path.isdir(base):
             os.mkdir(base)
         self.running = False
-            
+        self._dir = None
+        
     def _get_lock(self, id:int)->Lock:
         """
         Returns the lock object for given id
@@ -64,6 +69,10 @@ class StorageNode(LoggerMixin):
             for l in locks:
                 l.release()
     
+    @property
+    def dir(self):
+        return self._dir
+    
     def start(self):
         """
         Starts storage node service
@@ -71,13 +80,12 @@ class StorageNode(LoggerMixin):
         
         self.running = True
         with pyro.Daemon(self.node_dir[0], self.node_dir[1]) as daemon:
-            dir = daemon.register(self)
-        
-            with locate_ns(self.ns_dirs) as ns:
-                ns.register(type(self).NAME_PREFIX, dir)
-            
+            self._dir = daemon.register(self)
+            executor = ThreadPoolExecutor()
+            executor.submit(self.register_ns_loop, self._dir)
             self.log_info("Storage Node Started")
             daemon.requestLoop(lambda : self.running)
+        executor.shutdown()
     
     def stop(self):
         """
@@ -85,6 +93,34 @@ class StorageNode(LoggerMixin):
         """
         self.running = False
         
+    def register_ns_loop(self, dir:URI):
+        """
+        Periodiacally register in the name servers
+        """
+        while self.running:
+            try:
+                try:
+                    storage = create_object_proxy(type(self).NAME_PREFIX, self.ns_dirs)
+                    storage_dir = str(storage.dir)
+                    self_dir = str(self.dir)
+                    if storage_dir > self_dir:
+                        self.log_error("A storage node is already available")
+                        self.stop()
+                        break
+                    elif storage_dir < self_dir:
+                        self.log_debug("Stopping in use storage node")
+                        storage.stop()
+                        self.log_debug("Storage node stopped")
+                        time.sleep(5)
+                except PyroError as perr:
+                    self.log_info("Registering storage node")
+                    
+                with locate_ns(self.ns_dirs) as ns:
+                    ns.register(type(self).NAME_PREFIX, dir)
+                    
+            except Exception as exc:
+                self.log_exception(exc)
+            time.sleep(STORAGE_NS_SYNC_DELAY_SECONDS)
     
     def save_entries(self, entries_dict: Dict[int, List[URLState]]):
         """
