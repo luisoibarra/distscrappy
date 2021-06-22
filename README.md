@@ -164,20 +164,18 @@ foo@bar:-$ python init_streamlit_client.py
 
 Al usar HTTP es muy fácil consumir el servicio brindado por **DistScrappy** sin el uso explícito de la API brindada, realizando un HTTP request con el formato especificado a la dirección de los servidores.
 
-### Scrapeo
-tanto el init_streamlit_client como el init_console_client son inicializadores que instancian y pasan los argumentos debidamente a client el cual contiene la clase DistScrappyClient el cual es el encargado del scrapeo
+### Scrapping
+El scrapping es realizado por la clase *DistScrappyClient* el cual es utilizado en los programas listos para su uso provistos en **DistScrappy**.
 
-Basicamente procesamos todas las url que le son pasadas añadiendole en caso de ser necesario el prefijo "http://"  para mantener la consistencia del algoritmo
+En el scrapping se desea descargar un conjunto de URLs iniciales a una profundidad determinada. Cada una de estas url iniciales constituyen los dominios de url a partir de los cuales scrapear, al pasarle varias URLs al cliente estas conformarán todo el conjunto de dominio de las URLs, permitiendo que hayan vínculos entre descendientes de estos dominios.
 
-Cada una de estas url iniciales constituyen los dominios de url(en este caso retirandole el prefijo "http://" o el "https://") a partir de los cuales scrapear, al pasarse varias url al cliente estas conformaran todo el conjunto de dominio de las url, permitiendo que hayan vinculos entre descendientes de estos dominios.
+Utilizamos **BeautifulSoup** con el parser *lxml* para procesar el HTML recibido y a partir de ahí obtener los enlaces siguientes los cuales también se preprocesan para agregarlos a las URLs de las cuales salieron en caso de ser necesario.
 
-Utilizamos BeautifulSoup con el parser 'lxml' para procesar el body html recibido y a partir de ahí obtener los enlaces siguientes los cuales tb se preprocesan para agregarlos a las url de las cuales salieron en caso de ser necesario.
+Cada nueva URL es contrastada con una lista de URLs scrapeadas para no repetir descargas.
 
-Cada nueva url es contrastada con una lista de urls scrapeadas para no repetir urls.
+Este scrapeo es iterativo por tanto en cada paso que se obtienen los siguientes links se actualiza la lista de URLs scrapeadas y se limpia la listas de URLs a pedir al servidor, además de llevar la cuenta del nivel de profundidad del scrapeo.
 
-Este Scrapeo es iterativo por tanto en cada paso que se obtienen los siguientes links se actualiza la lista de urls scrapeadas y se limpia la listas de urls a pedir al servidor, ademas de llevar la cuenta del nivel de profundidad del scrapeo.
-
-En caso de ocurrir errores estos tb son guardados y , al acabar el algoritmo, devueltos junto a los html descargados
+En caso de ocurrir errores estos son guardados y , al acabar el algoritmo, devueltos junto a los HTMLs descargados
 
 
 ### Formato del cuerpo de Request-Response
