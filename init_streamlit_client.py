@@ -27,7 +27,7 @@ def start():
 
 
     st.info('''We strongly recommend to use free sites such as :\n
-    evea.uh.cu www.uci.cu \n ''')
+    evea.uh.cu www.uci.cu www.uh.cu\n ''')
 
 
 
@@ -35,12 +35,12 @@ def start():
         'url(s) input', value='evea.uh.cu').split()  # www.uci.cu www.cubadebate.cu evea.uh.cu
 
     depth = st.sidebar.slider('Depth Level',
-                              min_value=0, max_value=3, value=1, step=1)
+                              min_value=0, max_value=2, value=1, step=1)
 
     st.info('Time to scrape depends of depth level ,\
          the amount (and complexity) of the urls scrapped, the network speed and network availability')
 
-    html_preview_chckbx = st.sidebar.checkbox('Show html preview', value=True)
+    html_preview_chckbx = st.sidebar.checkbox('Show html preview', value=False)
 
     html_code_chckbx = st.sidebar.checkbox('Show html code', value=False)
 
