@@ -13,7 +13,7 @@ Para mayor comodidad, seguridad y evitar posibles fallas a la hora de correr el 
 <https://virtualenvwrapper.readthedocs.io/en/latest/>
 
 ```console
-foo@bar:-$ $ pip install virtualenvwrapper
+foo@bar:-$ pip install virtualenvwrapper
 ...
 $ export WORKON_HOME=~/Envs
 $ mkdir -p $WORKON_HOME
