@@ -2,6 +2,11 @@
 
 **DistScrappy** permite realizar el llamado scrapping de la web de manera distribuída. Su función actual es descargar las URLs de las páginas web hasta diferentes niveles. Se basa en una implementación de una Distributed Hash Table (DHT) usando el protocolo Chord.
 
+## Integranes
+
+- Luis Ernesto Ibarra Vázquez C411
+- Luis Enrique Dalmau Coopat C411
+
 ## Dependencias más importantes pip
 
 - streamlit
