@@ -30,6 +30,10 @@ foo@bar:-$ mkvirtualenv env1
 
 ### DistScrappy simple
 
+Todo en uno. Se recomienda solo cuando solo importe el funcionamiento del sistema, para mejor debugueo usar la versión modular presentada luego.
+
+
+
 Abra un terminal y escriba:
 
 ```console
@@ -38,7 +42,45 @@ foo@bar:-$ workon env1
 (env1)foo@bar:-$ python simple_setup.py
 ```
 
-> Este comando montará en su computadora la infraestructura necesaria para correr un sistema **DistScrappy** funcional basado en el archivo *config.py*.
+> Este comando montará en su computadora la infraestructura necesaria para correr un sistema **DistScrappy** funcional basado en el archivo *config.py*. No posee las ventajas de poder interactuar con los nodos mediante la consola.
+
+### DistScrappy modular
+
+Separado por partes. Mejor tradeoff para debugueo, se puede interactuar con los nodos mediante la consola y los logs están separados por consolas.
+
+
+
+Abra un terminal y escriba:
+
+```console
+foo@bar:-$ workon env1
+...
+(env1)foo@bar:-$ python simple_centrals.py
+```
+
+> Este comando montará en su computadora los nodos centrales basados en el archivo *config.py*. En la terminal se puede interactuar con los nodos mediante la escritura de comandos simples. Aquí se pueden apagar los servidores para probar la tolerancia a fallas.
+
+Abra un terminal y escriba:
+
+```console
+foo@bar:-$ workon env1
+...
+(env1)foo@bar:-$ python init_storage.py
+```
+
+> Este comando montará en su computadorel nodo de almacenamiento basado en el archivo *config.py*. En la terminal se puede interactuar con él mediante la escritura de comandos simples. Aquí apagar para probar la tolerancia a fallas.
+
+Abra un terminal y escriba:
+
+```console
+foo@bar:-$ workon env1
+...
+(env1)foo@bar:-$ python simple_rings.py
+```
+
+> Este comando montará en su computadora los nodos trabajadores basados en el archivo *config.py*. En la terminal se puede interactuar con los nodos mediante la escritura de comandos simples. Aquí se puede interactuar con los nodos para pedirle información sobre estos y también se pueden apagar para probar la tolerancia a fallas.
+
+### Consumir DistScrappy
 
 Abra otra terminal y escriba:
 
@@ -56,13 +98,25 @@ foo@bar:-$ workon env1
 
 La arquitectura de **DistScrappy** se conforma principalmente de dos partes. La primera parte consiste en los clientes que consumen el servicio, esta parte es bastante sencilla ya que simplemente se basa en protocolo estándar HTTP. La segunda se divide en dos conjuntos, uno primero de servidores centrales con direcciones bien conocidas por los clientes y un conjunto distribuido de nodos desconocidos por los clientes los cuales se encargan de distribuirse las tareas asignadas al sistema.
 
-PONER FOTO DE PIPELINE
-
 ### Comunicación
 
 **DistScrappy** usa tres protocolos de comunicación. El primero de estos es HTTP, el cual se usa a la hora de brindar el servicio a los clientes. Otro protocolo es el usado por **zmq** el cual se encarga principalmente de la comunicación entre los nodos centrales del sistema. Por último se encuentra el usado por **Pyro**, es el que más predomina ya que es el encargado de la comunicación nodos centrales-nodos trabajadores, nodos trabajadores-nodos trabajadores, nodo almacenamiento-nodos trabajadores.
 
-Para prevenir errores de comunicación, sobre los mencionados protocolos se crearon otros protocolos para el consumo de estos que se acercan más al necesitado por el sistema. Ejemplos de estos protocolos se pueden observar en *chord.ch_shared.py* donde se muestran funciones para el manejo del nombrado usando múltiples name servers de Pyro.  
+Para prevenir errores de comunicación, sobre los mencionados protocolos se crearon otros protocolos para el consumo de estos que se acercan más al necesitado por el sistema. Ejemplos de estos protocolos se pueden observar en *chord.ch_shared.py* donde se muestran funciones para el manejo del nombrado usando múltiples name servers de Pyro. Para aliviar la carga a los name server se implementó un sistema de caché para las direcciones, disminuyendo grandemente los pedidos a los name servers permitiendo la comunicación más directa entre objetos remotos .
+
+
+
+### Pipeline
+
+El pipeline natural que siguen los pedidos del sistema en el cliente es el siguiente:
+
+1. Cliente hace el HTTP request de las URLs a los nodos centrales.
+2. Los nodos centrales le mandan el pedido a los nodos trabajadores de la DHT mediante un RPC.
+3. Los nodos trabajadores localizan el nodo encargado de cada URL.
+4. El nodo encargado de cada URL la descarga o devuelve la versión guardada en la caché, mediante el callstack regresa el resultado al nodo que hizo el pedido.
+5. Se realiza un HTTP response al cliente con la información deseada.
+
+![pipeline](images/pipeline.jpg)
 
 ## Cliente
 
@@ -230,3 +284,15 @@ Para iniciar el nodo se almacenamiento se tiene el script:
 ```console
 foo@bar:-$ python init_storage.py
 ```
+
+#### Persistencia
+
+Este nodo guarda en las entradas de la DHT en formato JSON para conservar el estado de la DHT.
+
+#### Consistencia
+
+Para evitar el acceso a varios recursos al mismo tiempo este nodo implementa un sistema de sincronización basado en Locks de Python que permite un acceso seguro a los datos y así mantener la consistencia. 
+
+#### Tolerancia a fallas
+
+En caso de que este nodo falle o simplemente no esté activo los nodos de la DHT tendrán datos que se pueden perder en caso de alguna falla, aunque una vez estos nodos detecten que el nodo está activo salvarán los cambios en este.
