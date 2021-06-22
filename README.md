@@ -64,6 +64,13 @@ El caching mejora nuestro programa ,reduciendo el tiempo de descarga en una déc
 
 También contamos con un sección de tiempo para visualizar mejor el efecto del mismo
 
+#### Estadísticas del Caching
+| URL        | Deep Level 1  | Download Time  |Caching Time      |
+|------------|---------------|----------------|------------------|
+| www.uh.cu  | 149           |  96.6 - 292.7  | 5.1 - 9.8 - 14.4 |
+| www.uci.cu | 82            | 149.4 - 158.6  |     3.6 - 4      |
+| evea.uh.cu |13             |     23.2       |     0.2 - 6      |
+
 ## Sistema General
 
 ### Arquitectura
@@ -102,6 +109,22 @@ foo@bar:-$ python init_streamlit_client.py
 ```
 
 Al usar HTTP es muy fácil consumir el servicio brindado por **DistScrappy** sin el uso explícito de la API brindada, realizando un HTTP request con el formato especificado a la dirección de los servidores.
+
+### Scrapeo
+tanto el init_streamlit_client como el init_console_client son inicializadores que instancian y pasan los argumentos debidamente a client el cual contiene la clase DistScrappyClient el cual es el encargado del scrapeo
+
+Basicamente procesamos todas las url que le son pasadas añadiendole en caso de ser necesario el prefijo "http://"  para mantener la consistencia del algoritmo
+
+Cada una de estas url iniciales constituyen los dominios de url(en este caso retirandole el prefijo "http://" o el "https://") a partir de los cuales scrapear, al pasarse varias url al cliente estas conformaran todo el conjunto de dominio de las url, permitiendo que hayan vinculos entre descendientes de estos dominios.
+
+Utilizamos BeautifulSoup con el parser 'lxml' para procesar el body html recibido y a partir de ahí obtener los enlaces siguientes los cuales tb se preprocesan para agregarlos a las url de las cuales salieron en caso de ser necesario.
+
+Cada nueva url es contrastada con una lista de urls scrapeadas para no repetir urls.
+
+Este Scrapeo es iterativo por tanto en cada paso que se obtienen los siguientes links se actualiza la lista de urls scrapeadas y se limpia la listas de urls a pedir al servidor, ademas de llevar la cuenta del nivel de profundidad del scrapeo.
+
+En caso de ocurrir errores estos tb son guardados y , al acabar el algoritmo, devueltos junto a los html descargados
+
 
 ### Formato del cuerpo de Request-Response
 

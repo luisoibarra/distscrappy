@@ -13,17 +13,17 @@ import time
 def start():
     st.title("DistScrappy")
     st.info('''Availables commands:\n
-             URL1 URL2 URL3 [...] \n
-            Example:\n 
-            -write your urls in the url(s) input zone with a space as separator
-             www.wikipedia.org  http://www.instagram.com  \n
-            -select the depth level to scrape for \n
-            -then click the fetch button to fetch those url\n
-            Before clicking fetch button you can check this options:\n
-            -(Optional) mark the Show HTML preview to show the html preview of the fetched page(s)\n
-            -(Optional) mark the Show HTML code to show the html code of the fetched page(s)\n
-            -(Optional) mark the Save HTML code to save the html code of the fetched page(s)\n
-            ''')
+        URL1 URL2 URL3 [...] \n
+    Example:\n 
+    -write your urls in the url(s) input zone with a space as separator
+        www.wikipedia.org  http://www.instagram.com  \n
+    -select the depth level to scrape for \n
+    -then click the fetch button to fetch those url\n
+    Before clicking fetch button you can check this options:\n
+    -(Optional) mark the "Show html preview" checkbox to show the html preview of the fetched page(s)\n
+    -(Optional) mark the "Show html code" checkbox to show the html code of the fetched page(s)\n
+    -(Optional) mark the "Save html code" checkbox to save the html code of the fetched page(s)\n
+    ''')
 
 
     st.info('''We strongly recommend to use free sites such as :\n
