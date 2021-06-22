@@ -170,6 +170,9 @@ foo@bar:-$ python init_streamlit_client.py
 
 Al usar HTTP es muy fácil consumir el servicio brindado por **DistScrappy** sin el uso explícito de la API brindada, realizando un HTTP request con el formato especificado a la dirección de los servidores.
 
+### Vista de Ejemplo
+![](streamlit_client.gif)
+
 ### Scrapping
 El scrapping es realizado por la clase *DistScrappyClient* el cual es utilizado en los programas listos para su uso provistos en **DistScrappy**.
 
