@@ -109,9 +109,9 @@ También contamos con un sección de tiempo para visualizar mejor el efecto del 
 #### Estadísticas del Caching
 | URL        | Deep Level 1  | Download Time  |Caching Time      |
 |------------|---------------|----------------|------------------|
-| www.uh.cu  | 149           |  96.6 - 292.7  | 5.1 - 9.8 - 14.4 |
-| www.uci.cu | 82            | 149.4 - 158.6  |     3.6 - 4      |
-| evea.uh.cu |13             |     23.2       |     0.2 - 6      |
+| www.uh.cu  |  149 sites         |  96.6 - 292.7  | 5.1 - 9.8 - 14.4 |
+| www.uci.cu |   82 sites         | 149.4 - 158.6  |     3.6 - 4      |
+| evea.uh.cu |   13 sites         |     23.2       |     0.2 - 6      |
 
 ## Sistema General
 
