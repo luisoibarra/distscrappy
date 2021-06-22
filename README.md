@@ -2,11 +2,12 @@
 
 **DistScrappy** permite realizar el llamado scrapping de la web de manera distribuída. Su función actual es descargar las URLs de las páginas web hasta diferentes niveles. Se basa en una implementación de una Distributed Hash Table (DHT) usando el protocolo Chord.
 
-### Dependencias más importantes pip:
+## Dependencias más importantes pip
+
 - streamlit
 - plac
 - bs4
-- lxml 
+- lxml
 
 ## Uso básico
 
@@ -38,8 +39,6 @@ foo@bar:-$ mkvirtualenv env1
 
 Todo en uno. Se recomienda solo cuando solo importe el funcionamiento del sistema, para mejor debugueo usar la versión modular presentada luego.
 
-
-
 Abra un terminal y escriba:
 
 ```console
@@ -53,8 +52,6 @@ foo@bar:-$ workon env1
 ### DistScrappy modular
 
 Separado por partes. Mejor tradeoff para debugueo, se puede interactuar con los nodos mediante la consola y los logs están separados por consolas.
-
-
 
 Abra un terminal y escriba:
 
@@ -112,7 +109,8 @@ El caching mejora nuestro programa ,reduciendo el tiempo de descarga en una déc
 
 También contamos con un sección de tiempo para visualizar mejor el efecto del mismo
 
-#### Estadísticas del Caching
+### Estadísticas del Caching
+
 | URL        | Depth Level 1  | Download Time  |Caching Time      |
 |------------|---------------|----------------|------------------|
 | www.uh.cu  |  149 sites         |  96.6 - 292.7  | 5.1 - 9.8 - 14.4 |
@@ -130,8 +128,6 @@ La arquitectura de **DistScrappy** se conforma principalmente de dos partes. La 
 **DistScrappy** usa tres protocolos de comunicación. El primero de estos es HTTP, el cual se usa a la hora de brindar el servicio a los clientes. Otro protocolo es el usado por **zmq** el cual se encarga principalmente de la comunicación entre los nodos centrales del sistema. Por último se encuentra el usado por **Pyro**, es el que más predomina ya que es el encargado de la comunicación nodos centrales-nodos trabajadores, nodos trabajadores-nodos trabajadores, nodo almacenamiento-nodos trabajadores.
 
 Para prevenir errores de comunicación, sobre los mencionados protocolos se crearon otros protocolos para el consumo de estos que se acercan más al necesitado por el sistema. Ejemplos de estos protocolos se pueden observar en *chord.ch_shared.py* donde se muestran funciones para el manejo del nombrado usando múltiples name servers de Pyro. Para aliviar la carga a los name server se implementó un sistema de caché para las direcciones, disminuyendo grandemente los pedidos a los name servers permitiendo la comunicación más directa entre objetos remotos .
-
-
 
 ### Pipeline
 
@@ -171,9 +167,11 @@ foo@bar:-$ python init_streamlit_client.py
 Al usar HTTP es muy fácil consumir el servicio brindado por **DistScrappy** sin el uso explícito de la API brindada, realizando un HTTP request con el formato especificado a la dirección de los servidores.
 
 ### Vista de Ejemplo
-![](streamlit_client.gif)
+
+![example](streamlit_client.gif)
 
 ### Scrapping
+
 El scrapping es realizado por la clase *DistScrappyClient* el cual es utilizado en los programas listos para su uso provistos en **DistScrappy**.
 
 En el scrapping se desea descargar un conjunto de URLs iniciales a una profundidad determinada. Cada una de estas url iniciales constituyen los dominios de url a partir de los cuales scrapear, al pasarle varias URLs al cliente estas conformarán todo el conjunto de dominio de las URLs, permitiendo que hayan vínculos entre descendientes de estos dominios.
@@ -185,7 +183,6 @@ Cada nueva URL es contrastada con una lista de URLs scrapeadas para no repetir d
 Este scrapeo es iterativo por tanto en cada paso que se obtienen los siguientes links se actualiza la lista de URLs scrapeadas y se limpia la listas de URLs a pedir al servidor, además de llevar la cuenta del nivel de profundidad del scrapeo.
 
 En caso de ocurrir errores estos son guardados y , al acabar el algoritmo, devueltos junto a los HTMLs descargados
-
 
 ### Formato del cuerpo de Request-Response
 
@@ -264,9 +261,9 @@ Para el manejo de los pedidos de los clientes en cada nodo central se crea un se
 
 Entre los nodos centrales se mantiene un coordinador, el cual es el encargado de realizar tareas de mantenimiento en el sistema como la de sincronización de los name servers y del tiempo en los nodos. Este coordinador es seleccionado mediante el algoritmo Bully y se mantiene vigilancia sobre él para en caso de fallar se reeliga uno nuevo.
 
-#### Nombrado 
+#### Nombrado
 
-Estos nodos son encargados de hostear un name server para proveer del un servicio de nombrado al sistema. Para mantener la consistencia de los name servers periódiamente estos se actualizan mutuamente. 
+Estos nodos son encargados de hostear un name server para proveer del un servicio de nombrado al sistema. Para mantener la consistencia de los name servers periódiamente estos se actualizan mutuamente.
 
 #### Toleracia a fallas
 
@@ -335,7 +332,7 @@ Este nodo guarda en las entradas de la DHT en formato JSON para conservar el est
 
 #### Consistencia
 
-Para evitar el acceso a varios recursos al mismo tiempo este nodo implementa un sistema de sincronización basado en Locks de Python que permite un acceso seguro a los datos y así mantener la consistencia. 
+Para evitar el acceso a varios recursos al mismo tiempo este nodo implementa un sistema de sincronización basado en Locks de Python que permite un acceso seguro a los datos y así mantener la consistencia.
 
 #### Tolerancia a fallas
 
